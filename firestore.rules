@@ -1,0 +1,73 @@
+rules_version = '2';
+
+// This is its own Firebase project (codrafroj-quiz), separate from the
+// coderafroj.me portfolio's project. Deploy with:
+//   firebase deploy --only firestore:rules
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isSignedIn() &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    // User profiles: anyone signed in can read (needed for admin views,
+    // and for showing quiz owner names); only the owner can create/update
+    // their own profile.
+    match /users/{uid} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && request.auth.uid == uid;
+      allow update: if isSignedIn() && (request.auth.uid == uid || isAdmin());
+      allow delete: if false;
+    }
+
+    // Quizzes: publicly readable (so unauthenticated players can open a
+    // shared link and play solo). Only the owner or an admin can modify.
+    match /quizzes/{quizId} {
+      allow read: if true;
+      allow create: if isSignedIn() && request.resource.data.ownerId == request.auth.uid;
+      allow update, delete: if isSignedIn() &&
+        (resource.data.ownerId == request.auth.uid || isAdmin());
+
+      // Solo-mode attempts: anyone (even signed out) can log a result;
+      // nothing here is ever edited or deleted, only appended.
+      match /attempts/{attemptId} {
+        allow read: if true;
+        allow create: if true;
+        allow update, delete: if false;
+      }
+    }
+
+    // Live sessions: intentionally open to unauthenticated players, since
+    // joining a live game never requires an account — only creating a quiz
+    // and hosting does. This is a deliberate v1 trade-off: anyone with a
+    // session code can read/write player + answer documents within it.
+    match /sessions/{code} {
+      allow read: if true;
+      allow create: if isSignedIn();
+      allow update: if isSignedIn() && resource.data.hostId == request.auth.uid;
+      allow delete: if false;
+
+      match /players/{playerId} {
+        allow read: if true;
+        allow create, update: if true;
+        allow delete: if false;
+      }
+
+      match /answers/{answerId} {
+        allow read: if true;
+        allow create: if true;
+        allow update, delete: if false;
+      }
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

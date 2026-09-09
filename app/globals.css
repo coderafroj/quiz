@@ -1,0 +1,128 @@
+@import "tailwindcss";
+
+/* ==========================================================================
+   CODARAFROJ PLAY — shares the monochrome "Studio" design language of the
+   main portfolio (coderafroj.me), so the two sites feel like one brand.
+   ========================================================================== */
+
+:root {
+  --mono-bg: #050505;
+  --mono-surface: #0d0d0d;
+  --mono-surface-raised: #131313;
+  --mono-border: rgba(255, 255, 255, 0.12);
+  --mono-border-strong: rgba(255, 255, 255, 0.28);
+  --mono-fg: #f7f7f5;
+  --mono-fg-dim: #b4b4b0;
+  --mono-muted: #6e6e6a;
+  --accent-correct: #3ecf8e;
+  --accent-wrong: #ff5c5c;
+
+  --font-display: var(--font-bricolage);
+  --font-body: var(--font-inter);
+  --font-mono: var(--font-jetbrains);
+}
+
+@theme inline {
+  --color-bg: var(--mono-bg);
+  --color-surface: var(--mono-surface);
+  --color-surface-raised: var(--mono-surface-raised);
+  --color-border: var(--mono-border);
+  --color-border-strong: var(--mono-border-strong);
+  --color-fg: var(--mono-fg);
+  --color-fg-dim: var(--mono-fg-dim);
+  --color-muted: var(--mono-muted);
+  --color-correct: var(--accent-correct);
+  --color-wrong: var(--accent-wrong);
+  --font-display: var(--font-display);
+  --font-body: var(--font-body);
+  --font-mono: var(--font-mono);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--mono-bg);
+  color: var(--mono-fg);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: var(--mono-fg);
+  color: var(--mono-bg);
+}
+
+.grain-bg {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background: var(--mono-bg);
+}
+
+.grain-bg::after {
+  content: "";
+  position: absolute;
+  inset: -200px;
+  opacity: 0.45;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  animation: grain-shift 1.2s steps(4) infinite;
+}
+
+@keyframes grain-shift {
+  0% { transform: translate(0, 0); }
+  25% { transform: translate(-2%, 2%); }
+  50% { transform: translate(2%, -1%); }
+  75% { transform: translate(-1%, -2%); }
+  100% { transform: translate(0, 0); }
+}
+
+.card-frame {
+  border: 1px solid var(--mono-border);
+  background: var(--mono-surface);
+  transition: border-color 0.3s ease, background-color 0.3s ease;
+}
+
+.card-frame:hover {
+  border-color: var(--mono-border-strong);
+}
+
+.invert-hover {
+  transition: background-color 0.35s cubic-bezier(0.65, 0, 0.35, 1), color 0.35s cubic-bezier(0.65, 0, 0.35, 1);
+}
+
+.invert-hover:hover {
+  background-color: var(--mono-fg);
+  color: var(--mono-bg);
+}
+
+::-webkit-scrollbar { width: 10px; }
+::-webkit-scrollbar-track { background: var(--mono-bg); }
+::-webkit-scrollbar-thumb { background: var(--mono-border-strong); }
+::-webkit-scrollbar-thumb:hover { background: var(--mono-fg-dim); }
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+.caret {
+  display: inline-block;
+  width: 0.5em;
+  height: 1em;
+  background: var(--mono-fg);
+  margin-left: 2px;
+  animation: blink 1s steps(1) infinite;
+  vertical-align: text-bottom;
+}
+
+@keyframes blink { 50% { opacity: 0; } }
