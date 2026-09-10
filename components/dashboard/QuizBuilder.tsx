@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Trash2, GripVertical, Save } from "lucide-react";
+import { Plus, Trash2, GripVertical, Save, Sparkles, Loader2 } from "lucide-react";
 import { createQuiz, updateQuiz } from "@/lib/quizzes";
 import { useAuth } from "@/context/AuthContext";
 import type { Quiz, QuizQuestionItem, QuizVisibility } from "@/lib/types";
@@ -34,6 +34,64 @@ export default function QuizBuilder({ existingQuiz }: { existingQuiz?: Quiz }) {
   );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // --- AI quiz generation ---
+  const [aiTopic, setAiTopic] = useState("");
+  const [aiCount, setAiCount] = useState(5);
+  const [aiDifficulty, setAiDifficulty] = useState("medium");
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
+
+  async function handleGenerateWithAI() {
+    if (!aiTopic.trim()) {
+      setAiError("Pehle koi topic likho.");
+      return;
+    }
+    setAiError(null);
+    setAiLoading(true);
+    try {
+      const res = await fetch("/api/generate-quiz", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          topic: aiTopic,
+          count: aiCount,
+          language,
+          difficulty: aiDifficulty,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setAiError(data.error || "Quiz generate nahi ho paya.");
+        return;
+      }
+
+      const generated: QuizQuestionItem[] = data.questions.map(
+        (q: { text: string; options: string[]; correctIndex: number }) => ({
+          id: crypto.randomUUID(),
+          text: q.text,
+          options: q.options,
+          correctIndex: q.correctIndex,
+          timeLimit: 20,
+          points: 1000,
+        })
+      );
+
+      setQuestions((qs) => {
+        // If the only question so far is the default empty one, replace it.
+        const isBlankStart =
+          qs.length === 1 && !qs[0].text.trim() && qs[0].options.every((o) => !o.trim());
+        return isBlankStart ? generated : [...qs, ...generated];
+      });
+
+      if (!title.trim()) setTitle(aiTopic);
+      if (category === "General Knowledge") setCategory(aiTopic);
+    } catch (err) {
+      setAiError(err instanceof Error ? err.message : "Kuch galat ho gaya.");
+    } finally {
+      setAiLoading(false);
+    }
+  }
 
   function updateQuestion(id: string, patch: Partial<QuizQuestionItem>) {
     setQuestions((qs) => qs.map((q) => (q.id === id ? { ...q, ...patch } : q)));
@@ -157,6 +215,55 @@ export default function QuizBuilder({ existingQuiz }: { existingQuiz?: Quiz }) {
             </select>
           </div>
         </div>
+      </div>
+
+      <div className="card-frame p-6 mb-6 space-y-3 border-dashed">
+        <h2 className="font-mono text-xs uppercase tracking-widest text-muted mb-2 flex items-center gap-2">
+          <Sparkles size={14} /> Generate with AI
+        </h2>
+        <div className="grid sm:grid-cols-[1fr_auto_auto] gap-3">
+          <input
+            value={aiTopic}
+            onChange={(e) => setAiTopic(e.target.value)}
+            placeholder="Kis topic pe quiz banani hai? e.g. Cricket, Science, History"
+            className="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:border-fg outline-none"
+          />
+          <input
+            type="number"
+            min={1}
+            max={20}
+            value={aiCount}
+            onChange={(e) => setAiCount(Number(e.target.value))}
+            title="Number of questions"
+            className="w-24 bg-transparent border border-border px-3 py-2.5 text-sm focus:border-fg outline-none"
+          />
+          <select
+            value={aiDifficulty}
+            onChange={(e) => setAiDifficulty(e.target.value)}
+            className="bg-surface border border-border px-3 py-2.5 text-sm focus:border-fg outline-none"
+          >
+            <option value="easy">Easy</option>
+            <option value="medium">Medium</option>
+            <option value="hard">Hard</option>
+          </select>
+        </div>
+        <button
+          type="button"
+          onClick={handleGenerateWithAI}
+          disabled={aiLoading}
+          className="w-full flex items-center justify-center gap-2 py-3 border border-fg text-fg text-sm font-mono uppercase tracking-wide hover:bg-fg hover:text-bg transition-colors disabled:opacity-60"
+        >
+          {aiLoading ? (
+            <>
+              <Loader2 size={16} className="animate-spin" /> Generating…
+            </>
+          ) : (
+            <>
+              <Sparkles size={16} /> Generate Questions
+            </>
+          )}
+        </button>
+        {aiError && <p className="text-fg-dim text-xs font-mono">{aiError}</p>}
       </div>
 
       <div className="space-y-4">
