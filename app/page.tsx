@@ -59,6 +59,12 @@ export default function Home() {
             >
               Join a Live Game
             </Link>
+            <Link
+              href="/explore"
+              className="inline-flex items-center gap-2 px-6 py-3.5 border border-border text-fg font-semibold text-sm uppercase tracking-wide hover:border-fg transition-colors"
+            >
+              Explore Quizzes
+            </Link>
           </div>
         </div>
 

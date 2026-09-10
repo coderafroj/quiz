@@ -18,12 +18,7 @@ export async function ensureUserProfile(
   const snap = await getDoc(ref);
 
   if (snap.exists()) {
-    const existing = snap.data() as Omit<UserProfile, "uid">;
-    if (OWNER_EMAILS.includes(email.toLowerCase()) && existing.role !== "admin") {
-      await setDoc(ref, { role: "admin" }, { merge: true });
-      return { uid, ...existing, role: "admin" };
-    }
-    return { uid, ...existing };
+    return { uid, ...(snap.data() as Omit<UserProfile, "uid">) };
   }
 
   const role: UserRole = OWNER_EMAILS.includes(email.toLowerCase()) ? "admin" : "user";

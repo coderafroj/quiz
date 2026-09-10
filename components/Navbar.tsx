@@ -15,6 +15,9 @@ export default function Navbar() {
         </Link>
 
         <div className="flex items-center gap-1.5 sm:gap-3 font-mono text-[10px] sm:text-xs uppercase tracking-widest">
+          <Link href="/explore" className="px-2 sm:px-3 py-2 text-muted hover:text-fg transition-colors whitespace-nowrap">
+            Explore
+          </Link>
           <Link href="/join" className="px-2 sm:px-3 py-2 text-muted hover:text-fg transition-colors whitespace-nowrap">
             <span className="sm:hidden">Join</span>
             <span className="hidden sm:inline">Join a Game</span>

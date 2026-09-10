@@ -82,3 +82,28 @@ export function subscribeToAllQuizzes(
     (err) => onError?.(err as Error)
   );
 }
+
+// Public, playable quizzes only — used by the /explore page so anyone
+// (signed in or not) can browse quizzes grouped by topic/category.
+export function subscribeToPublicQuizzes(
+  onChange: (quizzes: Quiz[]) => void,
+  onError?: (err: Error) => void
+) {
+  const db = requireDb();
+  const q = query(
+    collection(db, COLLECTION),
+    where("visibility", "==", "public"),
+    orderBy("createdAt", "desc")
+  );
+  return onSnapshot(
+    q,
+    (snapshot) => {
+      onChange(
+        snapshot.docs
+          .map((d) => ({ id: d.id, ...(d.data() as Omit<Quiz, "id">) }))
+          .filter((quiz) => quiz.questions?.length > 0)
+      );
+    },
+    (err) => onError?.(err as Error)
+  );
+}
