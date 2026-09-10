@@ -32,9 +32,6 @@ export const metadata: Metadata = {
   description:
     "Build quizzes in any language, share a link for anyone to play solo, or host a live real-time game with a join code. Free, fast, and built by Codarafroj.",
   robots: { index: true, follow: true },
-  verification: {
-    google: "Zo7kRDzOSlDeXErjH1wKhw4TgqO5U9dHs8Q3MXnx9Vs",
-  },
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
