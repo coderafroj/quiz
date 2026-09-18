@@ -39,13 +39,30 @@ export default function QuizCard({ quiz, ownerId }: { quiz: Quiz; ownerId: strin
     <div className="card-frame p-5 flex flex-col gap-4">
       <div>
         <div className="flex items-center gap-2 mb-1 font-mono text-[11px] text-muted uppercase">
-          <span>{quiz.language}</span>
+          <span>{quiz.category}</span>
+          <span>·</span>
+          <span>{quiz.difficulty}</span>
           <span>·</span>
           <span>{quiz.questions.length} questions</span>
           <span>·</span>
           <span>{quiz.playCount} plays</span>
         </div>
-        <h3 className="font-display font-bold text-lg text-fg">{quiz.title}</h3>
+        <div className="flex items-center gap-2 mb-1">
+          <h3 className="font-display font-bold text-lg text-fg">{quiz.title}</h3>
+          {quiz.visibility === "public" && (
+            <span
+              className={`text-[10px] font-mono px-1.5 py-0.5 border ${
+                quiz.status === "approved"
+                  ? "border-fg text-fg"
+                  : quiz.status === "rejected"
+                  ? "border-border text-muted line-through"
+                  : "border-border-strong text-fg-dim"
+              }`}
+            >
+              {quiz.status === "approved" ? "Live on Explore" : quiz.status === "rejected" ? "Rejected" : "Pending Review"}
+            </span>
+          )}
+        </div>
         {quiz.description && <p className="text-fg-dim text-sm mt-1">{quiz.description}</p>}
       </div>
 

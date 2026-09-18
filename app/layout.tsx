@@ -26,11 +26,38 @@ const SITE_URL = "https://play.coderafroj.me";
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: "Codarafroj Play — Create & Host Quizzes",
+    default: "Codarafroj Quiz — Python, Java, C++ & GK Quizzes | Play or Create",
     template: "%s | Codarafroj Play",
   },
   description:
-    "Build quizzes in any language, share a link for anyone to play solo, or host a live real-time game with a join code. Free, fast, and built by Codarafroj.",
+    "Free coding and general knowledge quizzes — Python, C, C++, Java and more, organized by difficulty. Play solo or host a live real-time game with a join code. Build and share your own quiz in any language.",
+  keywords: [
+    "coderafroj quiz",
+    "codarafroj quiz",
+    "python quiz",
+    "c programming quiz",
+    "c++ quiz",
+    "java quiz",
+    "coding quiz online",
+    "programming quiz for beginners",
+    "live quiz game",
+    "create a quiz online free",
+    "quiz with join code",
+  ],
+  alternates: { canonical: SITE_URL },
+  openGraph: {
+    type: "website",
+    url: SITE_URL,
+    siteName: "Codarafroj Play",
+    title: "Codarafroj Quiz — Python, Java, C++ & GK Quizzes",
+    description:
+      "Free coding and general knowledge quizzes organized by topic and difficulty. Play solo or host a live game with a join code.",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Codarafroj Quiz — Python, Java, C++ & GK Quizzes",
+    description: "Play free coding quizzes solo or live with friends. Build your own in minutes.",
+  },
   robots: { index: true, follow: true },
 };
 

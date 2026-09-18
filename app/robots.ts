@@ -5,7 +5,7 @@ export default function robots(): MetadataRoute.Robots {
     rules: {
       userAgent: '*',
       allow: '/',
-      disallow: ['/admin/', '/dashboard/'],
+      disallow: ['/admin/', '/dashboard/', '/host/', '/live/'],
     },
     sitemap: 'https://play.coderafroj.me/sitemap.xml',
   };

@@ -5,9 +5,11 @@ import { useRouter } from "next/navigation";
 import { Plus, Trash2, GripVertical, Save, Sparkles, Loader2 } from "lucide-react";
 import { createQuiz, updateQuiz } from "@/lib/quizzes";
 import { useAuth } from "@/context/AuthContext";
-import type { Quiz, QuizQuestionItem, QuizVisibility } from "@/lib/types";
+import type { Quiz, QuizQuestionItem, QuizVisibility, QuizDifficulty } from "@/lib/types";
 
 const LANGUAGES = ["English", "Hindi", "Hinglish", "Spanish", "French", "Arabic", "Other"];
+const DIFFICULTIES: QuizDifficulty[] = ["Beginner", "Intermediate", "Advanced"];
+const TOPIC_SHORTCUTS = ["Python", "C", "C++", "Java", "JavaScript", "General Knowledge"];
 
 function newQuestion(): QuizQuestionItem {
   return {
@@ -28,6 +30,7 @@ export default function QuizBuilder({ existingQuiz }: { existingQuiz?: Quiz }) {
   const [description, setDescription] = useState(existingQuiz?.description || "");
   const [language, setLanguage] = useState(existingQuiz?.language || "English");
   const [category, setCategory] = useState(existingQuiz?.category || "General Knowledge");
+  const [difficulty, setDifficulty] = useState<QuizDifficulty>(existingQuiz?.difficulty || "Beginner");
   const [visibility, setVisibility] = useState<QuizVisibility>(existingQuiz?.visibility || "unlisted");
   const [questions, setQuestions] = useState<QuizQuestionItem[]>(
     existingQuiz?.questions?.length ? existingQuiz.questions : [newQuestion()]
@@ -86,6 +89,9 @@ export default function QuizBuilder({ existingQuiz }: { existingQuiz?: Quiz }) {
 
       if (!title.trim()) setTitle(aiTopic);
       if (category === "General Knowledge") setCategory(aiTopic);
+      const mappedDifficulty: QuizDifficulty =
+        aiDifficulty === "easy" ? "Beginner" : aiDifficulty === "hard" ? "Advanced" : "Intermediate";
+      setDifficulty(mappedDifficulty);
     } catch (err) {
       setAiError(err instanceof Error ? err.message : "Kuch galat ho gaya.");
     } finally {
@@ -130,21 +136,25 @@ export default function QuizBuilder({ existingQuiz }: { existingQuiz?: Quiz }) {
 
     setSaving(true);
     try {
-      const payload = {
-        ownerId: user.uid,
-        ownerName: profile.displayName,
+      const contentFields = {
         title,
         description,
         language,
         category,
+        difficulty,
         questions,
         visibility,
       };
       if (existingQuiz) {
-        await updateQuiz(existingQuiz.id, payload);
+        // Never touch ownerId/ownerName here — an admin editing someone
+        // else's quiz must not reassign ownership to themselves.
+        await updateQuiz(existingQuiz.id, contentFields);
         router.push("/dashboard");
       } else {
-        const id = await createQuiz(payload);
+        const id = await createQuiz(
+          { ...contentFields, ownerId: user.uid, ownerName: profile.displayName },
+          profile.role === "admin"
+        );
         router.push(`/dashboard/${id}/edit`);
       }
     } catch (err) {
@@ -156,6 +166,20 @@ export default function QuizBuilder({ existingQuiz }: { existingQuiz?: Quiz }) {
 
   return (
     <form onSubmit={handleSubmit} className="max-w-3xl mx-auto pb-20">
+      {existingQuiz && existingQuiz.status !== "approved" && (
+        <div
+          className={`p-4 mb-6 border font-mono text-xs ${
+            existingQuiz.status === "pending"
+              ? "border-border text-fg-dim"
+              : "border-border-strong text-fg"
+          }`}
+        >
+          {existingQuiz.status === "pending"
+            ? "⏳ Waiting for admin approval — this quiz still works via direct link, but won't appear on /explore until approved."
+            : "✕ This quiz was rejected by an admin and won't appear on /explore. It still works via direct link."}
+        </div>
+      )}
+
       <div className="card-frame p-6 mb-6 space-y-4">
         <h2 className="font-mono text-xs uppercase tracking-widest text-muted mb-2">
           Quiz Details
@@ -180,6 +204,33 @@ export default function QuizBuilder({ existingQuiz }: { existingQuiz?: Quiz }) {
             className="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:border-fg outline-none resize-none"
           />
         </div>
+        <div>
+          <label className="block font-mono text-xs text-muted uppercase mb-1">
+            Topic / Category
+          </label>
+          <input
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+            placeholder="e.g. Python, C++, Java, General Knowledge"
+            className="w-full bg-transparent border border-border px-3 py-2.5 text-sm mb-2 focus:border-fg outline-none"
+          />
+          <div className="flex flex-wrap gap-2">
+            {TOPIC_SHORTCUTS.map((t) => (
+              <button
+                key={t}
+                type="button"
+                onClick={() => setCategory(t)}
+                className={`px-2.5 py-1 font-mono text-[11px] border transition-colors ${
+                  category === t
+                    ? "bg-fg text-bg border-fg"
+                    : "border-border text-muted hover:border-fg hover:text-fg"
+                }`}
+              >
+                {t}
+              </button>
+            ))}
+          </div>
+        </div>
         <div className="grid sm:grid-cols-3 gap-4">
           <div>
             <label className="block font-mono text-xs text-muted uppercase mb-1">Language</label>
@@ -196,12 +247,20 @@ export default function QuizBuilder({ existingQuiz }: { existingQuiz?: Quiz }) {
             </select>
           </div>
           <div>
-            <label className="block font-mono text-xs text-muted uppercase mb-1">Category</label>
-            <input
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-              className="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:border-fg outline-none"
-            />
+            <label className="block font-mono text-xs text-muted uppercase mb-1">
+              Difficulty Level
+            </label>
+            <select
+              value={difficulty}
+              onChange={(e) => setDifficulty(e.target.value as QuizDifficulty)}
+              className="w-full bg-surface border border-border px-3 py-2.5 text-sm focus:border-fg outline-none"
+            >
+              {DIFFICULTIES.map((d) => (
+                <option key={d} value={d}>
+                  {d}
+                </option>
+              ))}
+            </select>
           </div>
           <div>
             <label className="block font-mono text-xs text-muted uppercase mb-1">Visibility</label>
@@ -211,11 +270,12 @@ export default function QuizBuilder({ existingQuiz }: { existingQuiz?: Quiz }) {
               className="w-full bg-surface border border-border px-3 py-2.5 text-sm focus:border-fg outline-none"
             >
               <option value="unlisted">Unlisted (link only)</option>
-              <option value="public">Public</option>
+              <option value="public">Public (needs admin approval)</option>
             </select>
           </div>
         </div>
       </div>
+
 
       <div className="card-frame p-6 mb-6 space-y-3 border-dashed">
         <h2 className="font-mono text-xs uppercase tracking-widest text-muted mb-2 flex items-center gap-2">

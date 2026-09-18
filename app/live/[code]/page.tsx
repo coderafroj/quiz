@@ -110,9 +110,12 @@ export default function LivePlayerPage() {
       <div className="min-h-screen flex flex-col items-center justify-center px-5 py-10">
         {!hasAnswered ? (
           <>
-            <div className="flex items-center gap-2 mb-8 font-mono text-sm text-fg">
+            <div className="flex items-center gap-2 mb-6 font-mono text-sm text-fg">
               <Clock size={14} /> {timeLeft}s
             </div>
+            <h1 className="font-display font-bold text-xl md:text-2xl text-fg text-center max-w-lg mb-8">
+              {question.text}
+            </h1>
             <div className="grid grid-cols-2 gap-3 w-full max-w-md">
               {question.options.map((opt, idx) => (
                 <button
@@ -137,9 +140,27 @@ export default function LivePlayerPage() {
   }
 
   if (session.status === "reveal") {
+    const answeredThisQuestion = answeredForQuestion === session.currentQuestionIndex;
+    const wasCorrect = answeredThisQuestion && answeredIndex === question.correctIndex;
     return (
       <div className="min-h-screen flex flex-col items-center justify-center px-5 text-center">
-        <p className="font-mono text-xs uppercase tracking-widest text-muted mb-4">Your Score</p>
+        {answeredThisQuestion ? (
+          <>
+            <div
+              className={`w-16 h-16 rounded-full flex items-center justify-center mb-4 ${
+                wasCorrect ? "bg-fg text-bg" : "border border-border text-muted"
+              }`}
+            >
+              <Check size={28} />
+            </div>
+            <p className="font-mono text-sm text-muted mb-1">
+              {wasCorrect ? "Correct!" : `Correct answer: ${question.options[question.correctIndex]}`}
+            </p>
+          </>
+        ) : (
+          <p className="font-mono text-sm text-muted mb-1">You didn&apos;t answer in time</p>
+        )}
+        <p className="font-mono text-xs uppercase tracking-widest text-muted mt-6 mb-2">Your Score</p>
         <h1 className="font-display font-extrabold text-5xl text-fg mb-2">{myPlayer?.score ?? 0}</h1>
         <p className="font-mono text-sm text-muted mb-8">
           Rank #{myRank || "—"} of {players.length}

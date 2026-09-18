@@ -18,6 +18,8 @@ export interface QuizQuestionItem {
 }
 
 export type QuizVisibility = "public" | "unlisted";
+export type QuizDifficulty = "Beginner" | "Intermediate" | "Advanced";
+export type QuizStatus = "pending" | "approved" | "rejected";
 
 export interface Quiz {
   id: string;
@@ -26,15 +28,19 @@ export interface Quiz {
   title: string;
   description: string;
   language: string;
+  /** Topic, e.g. "Python", "C++", "Java", "General Knowledge" — used for Explore filtering and SEO. */
   category: string;
+  difficulty: QuizDifficulty;
   questions: QuizQuestionItem[];
   visibility: QuizVisibility;
+  /** Only "approved" quizzes appear in the public Explore page and the sitemap. Direct links always work regardless of status. */
+  status: QuizStatus;
   createdAt: number;
   updatedAt: number;
   playCount: number;
 }
 
-export type QuizInput = Omit<Quiz, "id" | "createdAt" | "updatedAt" | "playCount">;
+export type QuizInput = Omit<Quiz, "id" | "createdAt" | "updatedAt" | "playCount" | "status">;
 
 export type SessionStatus = "lobby" | "question" | "reveal" | "ended";
 
