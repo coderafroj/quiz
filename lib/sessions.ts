@@ -37,6 +37,7 @@ export async function createSession(quiz: Quiz, hostId: string): Promise<string>
       quizTitle: quiz.title,
       hostId,
       status: "lobby",
+      mode: "classic",
       currentQuestionIndex: -1,
       questionStartedAt: null,
       createdAt: Date.now(),
@@ -45,6 +46,12 @@ export async function createSession(quiz: Quiz, hostId: string): Promise<string>
     return code;
   }
   throw new Error("Could not allocate a session code — please try again.");
+}
+
+/** Host-only, lobby-only: switches between Classic and Elimination before starting. */
+export async function setSessionMode(code: string, mode: "classic" | "elimination") {
+  const db = requireDb();
+  await updateDoc(doc(db, SESSIONS, code), { mode });
 }
 
 export function subscribeToSession(
@@ -88,6 +95,7 @@ export async function joinSession(code: string, name: string): Promise<string> {
   const ref = await addDoc(collection(db, SESSIONS, code, PLAYERS), {
     name,
     score: 0,
+    eliminated: false,
     joinedAt: Date.now(),
   });
   return ref.id;
@@ -124,6 +132,32 @@ export async function nextQuestion(code: string, session: LiveSession, totalQues
 export async function endSession(code: string) {
   const db = requireDb();
   await updateDoc(doc(db, SESSIONS, code), { status: "ended" });
+}
+
+/**
+ * Elimination mode only: called right when the host reveals the answer.
+ * Anyone still alive who didn't answer correctly this round is knocked out
+ * — they keep watching (and keep their score/rank), they just can't answer
+ * future questions. Classic mode never calls this.
+ */
+export async function applyElimination(
+  code: string,
+  players: LivePlayer[],
+  answers: LiveAnswer[],
+  correctIndex: number
+) {
+  const db = requireDb();
+  const answeredMap = new Map(answers.map((a) => [a.playerId, a]));
+
+  const updates = players
+    .filter((p) => !p.eliminated)
+    .filter((p) => {
+      const a = answeredMap.get(p.id);
+      return !a || a.selectedIndex !== correctIndex;
+    })
+    .map((p) => updateDoc(doc(db, SESSIONS, code, PLAYERS, p.id), { eliminated: true }));
+
+  await Promise.all(updates);
 }
 
 /** Submits a player's answer, scores it (with a speed bonus), and updates their total. */

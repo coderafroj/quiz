@@ -5,6 +5,7 @@ import {
   deleteDoc,
   doc,
   getDoc,
+  getDocs,
   onSnapshot,
   orderBy,
   query,
@@ -58,6 +59,46 @@ export async function approveQuiz(id: string) {
 export async function rejectQuiz(id: string) {
   const db = requireDb();
   await updateDoc(doc(db, COLLECTION, id), { status: "rejected", updatedAt: Date.now() });
+}
+
+/**
+ * Forks a quiz into a brand-new copy owned by someone else — GitHub-style
+ * remixing. Questions are deep-copied with fresh IDs so editing the remix
+ * never touches the original. The new copy always starts private+pending
+ * (the remixer decides if/when to publish their own version), and the
+ * original's `remixCount` ticks up for social proof.
+ */
+export async function remixQuiz(
+  original: Quiz,
+  newOwnerId: string,
+  newOwnerName: string,
+  isAdminAuthor: boolean
+): Promise<string> {
+  const db = requireDb();
+  const copiedQuestions = original.questions.map((q) => ({
+    ...q,
+    id: crypto.randomUUID(),
+  }));
+
+  const newId = await createQuiz(
+    {
+      ownerId: newOwnerId,
+      ownerName: newOwnerName,
+      title: `${original.title} (Remix)`,
+      description: original.description,
+      language: original.language,
+      category: original.category,
+      difficulty: original.difficulty,
+      questions: copiedQuestions,
+      visibility: "unlisted",
+      remixedFrom: original.id,
+      remixedFromTitle: original.title,
+    },
+    isAdminAuthor
+  );
+
+  await updateDoc(doc(db, COLLECTION, original.id), { remixCount: increment(1) });
+  return newId;
 }
 
 export async function getQuiz(id: string): Promise<Quiz | null> {
@@ -146,4 +187,19 @@ export function subscribeToPublicQuizzes(
     },
     (err) => onError?.(err as Error)
   );
+}
+
+/** One-time fetch of approved+public quizzes — used to deterministically pick "today's quiz" without keeping a live listener open on the home page. */
+export async function getApprovedQuizzesOnce(): Promise<Quiz[]> {
+  const db = requireDb();
+  const q = query(
+    collection(db, COLLECTION),
+    where("visibility", "==", "public"),
+    where("status", "==", "approved")
+  );
+  const snapshot = await getDocs(q);
+  return snapshot.docs
+    .map((d) => ({ id: d.id, ...(d.data() as Omit<Quiz, "id">) }))
+    .filter((quiz) => quiz.questions?.length > 0)
+    .sort((a, b) => a.id.localeCompare(b.id)); // stable order so the same day always resolves to the same quiz
 }

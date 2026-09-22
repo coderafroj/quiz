@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Search, Play, Radio } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import RemixButton from "@/components/RemixButton";
 import { subscribeToPublicQuizzes } from "@/lib/quizzes";
 import type { Quiz } from "@/lib/types";
 
@@ -123,6 +124,8 @@ export default function ExplorePage() {
                         <div className="flex items-center gap-2 mb-1 font-mono text-[11px] text-muted uppercase">
                           <span>{quiz.language}</span>
                           <span>·</span>
+                          <span>{quiz.difficulty}</span>
+                          <span>·</span>
                           <span>{quiz.questions.length} questions</span>
                           <span>·</span>
                           <span>{quiz.playCount} plays</span>
@@ -133,14 +136,22 @@ export default function ExplorePage() {
                             {quiz.description}
                           </p>
                         )}
-                        <p className="text-muted text-xs mt-2 font-mono">by {quiz.ownerName}</p>
+                        <p className="text-muted text-xs mt-2 font-mono">
+                          by {quiz.ownerName}
+                          {!!quiz.remixCount && quiz.remixCount > 0 && (
+                            <> · 🔀 {quiz.remixCount} remix{quiz.remixCount > 1 ? "es" : ""}</>
+                          )}
+                        </p>
                       </div>
-                      <Link
-                        href={`/play/${quiz.id}`}
-                        className="mt-auto flex items-center justify-center gap-2 py-2.5 bg-fg text-bg font-semibold text-xs uppercase tracking-wide hover:bg-fg-dim transition-colors"
-                      >
-                        <Play size={13} /> Play Now
-                      </Link>
+                      <div className="mt-auto flex gap-2">
+                        <Link
+                          href={`/play/${quiz.id}`}
+                          className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-fg text-bg font-semibold text-xs uppercase tracking-wide hover:bg-fg-dim transition-colors"
+                        >
+                          <Play size={13} /> Play Now
+                        </Link>
+                        <RemixButton quiz={quiz} />
+                      </div>
                     </div>
                   ))}
                 </div>

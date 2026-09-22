@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { Trophy, Users, Play, ArrowRight, Eye, Copy, Check } from "lucide-react";
+import QRCode from "qrcode";
+import { Trophy, Users, Play, ArrowRight, Eye, Copy, Check, Skull } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { getQuiz } from "@/lib/quizzes";
 import {
@@ -13,8 +14,10 @@ import {
   startSession,
   revealAnswer,
   nextQuestion,
+  setSessionMode,
+  applyElimination,
 } from "@/lib/sessions";
-import type { Quiz, LiveSession, LivePlayer, LiveAnswer } from "@/lib/types";
+import type { Quiz, LiveSession, LivePlayer, LiveAnswer, SessionMode } from "@/lib/types";
 
 export default function HostPage() {
   const { user, loading } = useAuth();
@@ -25,6 +28,8 @@ export default function HostPage() {
   const [players, setPlayers] = useState<LivePlayer[]>([]);
   const [answers, setAnswers] = useState<LiveAnswer[]>([]);
   const [copied, setCopied] = useState(false);
+  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
+  const [revealing, setRevealing] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) router.replace("/login");
@@ -53,6 +58,13 @@ export default function HostPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally keyed on the question index only
   }, [params.code, session?.currentQuestionIndex]);
 
+  useEffect(() => {
+    const joinUrl = `https://play.coderafroj.me/join?code=${params.code}`;
+    QRCode.toDataURL(joinUrl, { width: 240, margin: 1, color: { dark: "#ffffff", light: "#00000000" } })
+      .then(setQrDataUrl)
+      .catch(() => {});
+  }, [params.code]);
+
   if (loading || !user || !session || !quiz) {
     return (
       <div className="min-h-screen flex items-center justify-center font-mono text-sm text-muted">
@@ -63,11 +75,25 @@ export default function HostPage() {
 
   const question = quiz.questions[session.currentQuestionIndex];
   const isLastQuestion = session.currentQuestionIndex === quiz.questions.length - 1;
+  const alivePlayers = players.filter((p) => !p.eliminated);
+  const isElimination = session.mode === "elimination";
 
   function handleCopyCode() {
     navigator.clipboard.writeText(params.code);
     setCopied(true);
     setTimeout(() => setCopied(false), 1800);
+  }
+
+  async function handleReveal() {
+    setRevealing(true);
+    try {
+      await revealAnswer(params.code);
+      if (isElimination) {
+        await applyElimination(params.code, players, answers, question.correctIndex);
+      }
+    } finally {
+      setRevealing(false);
+    }
   }
 
   // ---- LOBBY ----
@@ -77,18 +103,38 @@ export default function HostPage() {
         <span className="font-mono text-xs uppercase tracking-widest text-muted mb-3">
           {quiz.title}
         </span>
-        <button
-          onClick={handleCopyCode}
-          className="flex items-center gap-3 mb-2 group"
-        >
+        <button onClick={handleCopyCode} className="flex items-center gap-3 mb-2 group">
           <span className="font-display font-extrabold text-6xl md:text-8xl tracking-widest text-fg">
             {params.code}
           </span>
           {copied ? <Check size={24} /> : <Copy size={24} className="text-muted group-hover:text-fg" />}
         </button>
-        <p className="font-mono text-xs text-muted mb-12">
+        <p className="font-mono text-xs text-muted mb-6">
           Players go to <span className="text-fg">play.coderafroj.me/join</span> and enter this code
+          — or scan below.
         </p>
+
+        {qrDataUrl && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={qrDataUrl} alt="Scan to join" className="w-40 h-40 mb-8 border border-border p-2" />
+        )}
+
+        <div className="flex gap-2 mb-8">
+          {(["classic", "elimination"] as SessionMode[]).map((m) => (
+            <button
+              key={m}
+              onClick={() => setSessionMode(params.code, m)}
+              className={`px-4 py-2 font-mono text-xs uppercase tracking-wide border transition-colors flex items-center gap-1.5 ${
+                session.mode === m
+                  ? "bg-fg text-bg border-fg"
+                  : "border-border text-muted hover:border-fg hover:text-fg"
+              }`}
+            >
+              {m === "elimination" && <Skull size={12} />}
+              {m === "classic" ? "Classic" : "Elimination"}
+            </button>
+          ))}
+        </div>
 
         <div className="flex items-center gap-2 mb-6 text-fg">
           <Users size={18} />
@@ -125,6 +171,7 @@ export default function HostPage() {
       <div className="min-h-screen flex flex-col items-center justify-center px-5 py-10 text-center">
         <span className="font-mono text-xs uppercase tracking-widest text-muted mb-4">
           Question {session.currentQuestionIndex + 1} / {quiz.questions.length}
+          {isElimination && ` · ${alivePlayers.length} alive`}
         </span>
         <h1 className="font-display font-extrabold text-3xl md:text-5xl text-fg max-w-3xl mb-12">
           {question.text}
@@ -141,13 +188,14 @@ export default function HostPage() {
         <div className="flex items-center gap-2 mb-8 text-fg">
           <Users size={16} />
           <span className="font-mono text-sm">
-            {answers.length} / {players.length} answered
+            {answers.length} / {isElimination ? alivePlayers.length : players.length} answered
           </span>
         </div>
 
         <button
-          onClick={() => revealAnswer(params.code)}
-          className="flex items-center gap-2 px-8 py-4 bg-fg text-bg font-semibold text-sm uppercase tracking-wide hover:bg-fg-dim transition-colors"
+          onClick={handleReveal}
+          disabled={revealing}
+          className="flex items-center gap-2 px-8 py-4 bg-fg text-bg font-semibold text-sm uppercase tracking-wide hover:bg-fg-dim transition-colors disabled:opacity-60"
         >
           <Eye size={16} /> Reveal Answer
         </button>
@@ -158,6 +206,7 @@ export default function HostPage() {
   // ---- REVEAL (show correct answer, per-option breakdown, leaderboard) ----
   if (session.status === "reveal") {
     const maxCount = Math.max(1, ...question.options.map((_, idx) => answers.filter((a) => a.selectedIndex === idx).length));
+    const eliminatedThisRound = players.filter((p) => p.eliminated).length;
 
     return (
       <div className="min-h-screen flex flex-col items-center justify-center px-5 py-10">
@@ -165,7 +214,7 @@ export default function HostPage() {
           {question.text}
         </h1>
 
-        <div className="w-full max-w-2xl space-y-3 mb-10">
+        <div className="w-full max-w-2xl space-y-3 mb-6">
           {question.options.map((opt, idx) => {
             const count = answers.filter((a) => a.selectedIndex === idx).length;
             const isCorrect = idx === question.correctIndex;
@@ -189,6 +238,12 @@ export default function HostPage() {
           })}
         </div>
 
+        {isElimination && (
+          <p className="font-mono text-xs text-muted mb-6 flex items-center gap-1.5">
+            <Skull size={13} /> {eliminatedThisRound} eliminated so far · {alivePlayers.length} still alive
+          </p>
+        )}
+
         <div className="w-full max-w-md mb-10">
           <p className="font-mono text-xs uppercase tracking-widest text-muted mb-3 flex items-center gap-2">
             <Trophy size={14} /> Leaderboard
@@ -197,7 +252,9 @@ export default function HostPage() {
             {players.slice(0, 5).map((p, i) => (
               <div key={p.id} className="flex items-center gap-3 px-4 py-2.5">
                 <span className="font-mono text-xs text-muted w-5">{i + 1}</span>
-                <span className="flex-1 text-fg text-sm font-medium">{p.name}</span>
+                <span className={`flex-1 text-sm font-medium ${p.eliminated ? "text-muted line-through" : "text-fg"}`}>
+                  {p.name}
+                </span>
                 <span className="font-mono text-xs text-fg-dim">{p.score}</span>
               </div>
             ))}
@@ -208,7 +265,8 @@ export default function HostPage() {
           onClick={() => nextQuestion(params.code, session, quiz.questions.length)}
           className="flex items-center gap-2 px-8 py-4 bg-fg text-bg font-semibold text-sm uppercase tracking-wide hover:bg-fg-dim transition-colors"
         >
-          {isLastQuestion ? "See Final Results" : "Next Question"} <ArrowRight size={16} />
+          {isLastQuestion || (isElimination && alivePlayers.length <= 1) ? "See Final Results" : "Next Question"}{" "}
+          <ArrowRight size={16} />
         </button>
       </div>
     );

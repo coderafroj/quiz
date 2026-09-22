@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { Check, Clock, Trophy, Users } from "lucide-react";
+import { Check, Clock, Trophy, Users, Skull } from "lucide-react";
 import { getQuiz } from "@/lib/quizzes";
 import { subscribeToSession, subscribeToPlayers, submitAnswer } from "@/lib/sessions";
 import type { Quiz, LiveSession, LivePlayer } from "@/lib/types";
@@ -106,6 +106,21 @@ export default function LivePlayerPage() {
 
   if (session.status === "question") {
     const hasAnswered = answeredIndex !== null && answeredForQuestion === session.currentQuestionIndex;
+    const isEliminated = !!myPlayer?.eliminated;
+
+    if (isEliminated) {
+      return (
+        <div className="min-h-screen flex flex-col items-center justify-center px-5 text-center">
+          <Skull size={32} className="text-muted mb-4" />
+          <h1 className="font-display font-bold text-xl text-fg mb-2">You&apos;re eliminated</h1>
+          <p className="font-mono text-sm text-muted mb-6">Watch the host screen to see how it ends.</p>
+          <p className="font-mono text-xs text-muted">
+            Final score: {myPlayer?.score ?? 0} · Rank #{myRank || "—"}
+          </p>
+        </div>
+      );
+    }
+
     return (
       <div className="min-h-screen flex flex-col items-center justify-center px-5 py-10">
         {!hasAnswered ? (
@@ -142,9 +157,15 @@ export default function LivePlayerPage() {
   if (session.status === "reveal") {
     const answeredThisQuestion = answeredForQuestion === session.currentQuestionIndex;
     const wasCorrect = answeredThisQuestion && answeredIndex === question.correctIndex;
+    const isEliminated = !!myPlayer?.eliminated;
     return (
       <div className="min-h-screen flex flex-col items-center justify-center px-5 text-center">
-        {answeredThisQuestion ? (
+        {isEliminated ? (
+          <>
+            <Skull size={28} className="text-muted mb-4" />
+            <p className="font-mono text-sm text-muted mb-1">You&apos;re out — spectating now</p>
+          </>
+        ) : answeredThisQuestion ? (
           <>
             <div
               className={`w-16 h-16 rounded-full flex items-center justify-center mb-4 ${
@@ -165,7 +186,9 @@ export default function LivePlayerPage() {
         <p className="font-mono text-sm text-muted mb-8">
           Rank #{myRank || "—"} of {players.length}
         </p>
-        <p className="font-mono text-xs text-muted">Waiting for the next question…</p>
+        <p className="font-mono text-xs text-muted">
+          {isEliminated ? "Watch the host screen for the finish." : "Waiting for the next question…"}
+        </p>
       </div>
     );
   }

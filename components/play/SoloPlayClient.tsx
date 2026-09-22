@@ -1,13 +1,30 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Check, X, Trophy, RotateCcw, Clock } from "lucide-react";
+import { Check, X, Trophy, RotateCcw, Clock, Share2, Brain, Loader2 } from "lucide-react";
 import { getQuiz, incrementPlayCount } from "@/lib/quizzes";
 import { recordAttempt } from "@/lib/attempts";
-import type { Quiz } from "@/lib/types";
+import { recordAnswerOutcome, getDueQuestionIds } from "@/lib/reviewQueue";
+import { generateScoreCard, shareScoreCard } from "@/lib/scoreCard";
+import { pickTodaysQuiz, recordDailyCompletion } from "@/lib/dailyQuiz";
+import { getApprovedQuizzesOnce } from "@/lib/quizzes";
+import type { Quiz, QuizQuestionItem, QuestionDifficulty } from "@/lib/types";
 
 type Stage = "loading" | "not-found" | "name" | "playing" | "finished";
+type Tier = QuestionDifficulty;
+
+const TIER_UP: Record<Tier, Tier> = { easy: "medium", medium: "hard", hard: "hard" };
+const TIER_DOWN: Record<Tier, Tier> = { hard: "medium", medium: "easy", easy: "easy" };
+const TIER_SEARCH_ORDER: Record<Tier, Tier[]> = {
+  easy: ["easy", "medium", "hard"],
+  medium: ["medium", "easy", "hard"],
+  hard: ["hard", "medium", "easy"],
+};
+
+function questionTier(q: QuizQuestionItem): Tier {
+  return q.difficulty || "medium";
+}
 
 export default function SoloPlayClient({
   quizId,
@@ -19,13 +36,27 @@ export default function SoloPlayClient({
   const [quiz, setQuiz] = useState<Quiz | null>(initialQuiz);
   const [stage, setStage] = useState<Stage>(initialQuiz ? "name" : "loading");
   const [playerName, setPlayerName] = useState("");
+  const [practiceMode, setPracticeMode] = useState(false);
+  const [dueCount, setDueCount] = useState(0);
+
+  // Adaptive engine state — the play order is built one question at a time
+  // based on how the player is doing, not fixed up front.
+  const [askedQuestions, setAskedQuestions] = useState<QuizQuestionItem[]>([]);
+  const usedIdsRef = useRef<Set<string>>(new Set());
+  const tierRef = useRef<Tier>("medium");
+  const streakRef = useRef(0); // positive = correct streak, negative = wrong streak
+  const [totalToAsk, setTotalToAsk] = useState(0);
+
   const [current, setCurrent] = useState(0);
   const [selected, setSelected] = useState<number | null>(null);
   const [score, setScore] = useState(0);
   const [timeLeft, setTimeLeft] = useState(0);
+  const [wasAdaptiveUsed, setWasAdaptiveUsed] = useState(false);
 
-  // If the server couldn't fetch it (e.g. brand new doc, cache lag), fall
-  // back to a client-side fetch instead of dead-ending on "not found".
+  const [dailyStreak, setDailyStreak] = useState<number | null>(null);
+  const [cardDataUrl, setCardDataUrl] = useState<string | null>(null);
+  const [generatingCard, setGeneratingCard] = useState(false);
+
   useEffect(() => {
     if (initialQuiz) return;
     getQuiz(quizId).then((q) => {
@@ -34,19 +65,95 @@ export default function SoloPlayClient({
     });
   }, [quizId, initialQuiz]);
 
-  const question = quiz?.questions[current];
+  useEffect(() => {
+    if (!quiz) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- derived once from the freshly-loaded quiz, not a render loop
+    setDueCount(getDueQuestionIds(quiz.id).length);
+  }, [quiz]);
+
+  function pickFromPools(pools: Record<Tier, QuizQuestionItem[]>, tier: Tier): QuizQuestionItem | null {
+    for (const t of TIER_SEARCH_ORDER[tier]) {
+      const candidates = pools[t].filter((q) => !usedIdsRef.current.has(q.id));
+      if (candidates.length > 0) {
+        return candidates[Math.floor(Math.random() * candidates.length)];
+      }
+    }
+    return null;
+  }
+
+  function buildPools(questions: QuizQuestionItem[]): Record<Tier, QuizQuestionItem[]> {
+    const pools: Record<Tier, QuizQuestionItem[]> = { easy: [], medium: [], hard: [] };
+    for (const q of questions) pools[questionTier(q)].push(q);
+    return pools;
+  }
+
+  const question = askedQuestions[current];
+
+  function startPlay(usePractice: boolean) {
+    if (!quiz) return;
+    setPracticeMode(usePractice);
+
+    let pool = quiz.questions;
+    if (usePractice) {
+      const due = new Set(getDueQuestionIds(quiz.id));
+      pool = quiz.questions.filter((q) => due.has(q.id));
+      if (pool.length === 0) pool = quiz.questions; // safety fallback
+    }
+
+    usedIdsRef.current = new Set();
+    tierRef.current = "medium";
+    streakRef.current = 0;
+    setTotalToAsk(pool.length);
+
+    if (usePractice) {
+      // Practice mode: just work through the due set directly, no adaptive reshuffling needed.
+      setAskedQuestions(pool);
+      pool.forEach((q) => usedIdsRef.current.add(q.id));
+      setWasAdaptiveUsed(false);
+    } else {
+      const pools = buildPools(pool);
+      const first = pickFromPools(pools, "medium") || pool[0];
+      usedIdsRef.current.add(first.id);
+      setAskedQuestions([first]);
+      // Adaptive only matters if there's more than one difficulty tier present.
+      setWasAdaptiveUsed(new Set(pool.map(questionTier)).size > 1);
+    }
+
+    setCurrent(0);
+    setSelected(null);
+    setScore(0);
+    setStage("playing");
+  }
 
   const handleNext = useCallback(() => {
     if (!quiz) return;
-    if (current + 1 >= quiz.questions.length) {
+    const isLast = current + 1 >= totalToAsk;
+
+    if (isLast) {
       setStage("finished");
       incrementPlayCount(quiz.id).catch(() => {});
-      recordAttempt(quiz.id, playerName, score, quiz.questions.length).catch(() => {});
-    } else {
-      setCurrent((c) => c + 1);
-      setSelected(null);
+      recordAttempt(quiz.id, playerName, score, totalToAsk).catch(() => {});
+
+      getApprovedQuizzesOnce().then((quizzes) => {
+        const todays = pickTodaysQuiz(quizzes);
+        if (todays?.id === quiz.id) {
+          setDailyStreak(recordDailyCompletion());
+        }
+      });
+      return;
     }
-  }, [quiz, current, playerName, score]);
+
+    if (!practiceMode) {
+      const pools = buildPools(quiz.questions);
+      const next = pickFromPools(pools, tierRef.current);
+      if (next) {
+        usedIdsRef.current.add(next.id);
+        setAskedQuestions((prev) => [...prev, next]);
+      }
+    }
+    setCurrent((c) => c + 1);
+    setSelected(null);
+  }, [quiz, current, playerName, score, practiceMode, totalToAsk]);
 
   useEffect(() => {
     if (stage !== "playing" || !question) return;
@@ -72,22 +179,55 @@ export default function SoloPlayClient({
   }, [timeLeft, stage, selected, handleNext]);
 
   function handleSelect(idx: number) {
-    if (selected !== null || !question) return;
+    if (selected !== null || !question || !quiz) return;
     setSelected(idx);
-    if (idx === question.correctIndex) setScore((s) => s + 1);
+    const isCorrect = idx === question.correctIndex;
+    if (isCorrect) setScore((s) => s + 1);
+
+    recordAnswerOutcome(quiz.id, question.id, isCorrect);
+
+    // Adjust the adaptive tier based on a streak of 2 in the same direction.
+    streakRef.current = isCorrect ? Math.max(1, streakRef.current + 1) : Math.min(-1, streakRef.current - 1);
+    if (streakRef.current >= 2) {
+      tierRef.current = TIER_UP[tierRef.current];
+      streakRef.current = 0;
+    } else if (streakRef.current <= -2) {
+      tierRef.current = TIER_DOWN[tierRef.current];
+      streakRef.current = 0;
+    }
+
     setTimeout(handleNext, 900);
   }
 
   function handleStart(e: React.FormEvent) {
     e.preventDefault();
-    setStage("playing");
+    startPlay(false);
   }
 
   function handleRestart() {
-    setCurrent(0);
-    setSelected(null);
-    setScore(0);
-    setStage("playing");
+    setCardDataUrl(null);
+    setDailyStreak(null);
+    startPlay(false);
+  }
+
+  async function handleShare() {
+    if (!quiz) return;
+    setGeneratingCard(true);
+    try {
+      const url = await generateScoreCard({
+        quizTitle: quiz.title,
+        playerName: playerName || "Player",
+        score,
+        total: totalToAsk,
+        quizId: quiz.id,
+      });
+      setCardDataUrl(url);
+      await shareScoreCard(url, quiz.title);
+    } catch {
+      // Silently ignore — sharing is a nice-to-have, never block the results screen on it.
+    } finally {
+      setGeneratingCard(false);
+    }
   }
 
   if (stage === "loading") {
@@ -129,13 +269,22 @@ export default function SoloPlayClient({
           >
             Start Quiz
           </button>
+          {dueCount > 0 && (
+            <button
+              type="button"
+              onClick={() => playerName.trim() && startPlay(true)}
+              className="w-full mt-3 flex items-center justify-center gap-2 py-2.5 border border-border hover:border-fg transition-colors text-xs font-mono uppercase"
+            >
+              <Brain size={13} /> Practice {dueCount} Weak Spot{dueCount > 1 ? "s" : ""}
+            </button>
+          )}
         </form>
       </div>
     );
   }
 
   if (stage === "finished" && quiz) {
-    const pct = Math.round((score / quiz.questions.length) * 100);
+    const pct = totalToAsk > 0 ? Math.round((score / totalToAsk) * 100) : 0;
     return (
       <div className="min-h-screen flex items-center justify-center px-5">
         <div className="card-frame p-10 w-full max-w-md text-center">
@@ -161,15 +310,39 @@ export default function SoloPlayClient({
             </div>
           </div>
           <h2 className="font-display font-bold text-3xl text-fg mb-1">
-            {score} / {quiz.questions.length}
+            {score} / {totalToAsk}
           </h2>
-          <p className="text-fg-dim mb-8">Nice work, {playerName}.</p>
-          <button
-            onClick={handleRestart}
-            className="inline-flex items-center gap-2 px-5 py-2.5 border border-border hover:border-fg transition-colors font-semibold text-sm uppercase tracking-wide"
-          >
-            <RotateCcw size={14} /> Play Again
-          </button>
+          <p className="text-fg-dim mb-1">Nice work, {playerName}.</p>
+          {wasAdaptiveUsed && (
+            <p className="font-mono text-[11px] text-muted mb-4">
+              Adaptive mode adjusted question difficulty as you played.
+            </p>
+          )}
+          {dailyStreak !== null && (
+            <p className="font-mono text-xs text-fg mb-4">
+              🔥 Daily streak: {dailyStreak} day{dailyStreak > 1 ? "s" : ""}
+            </p>
+          )}
+          <div className="flex flex-wrap gap-3 justify-center mt-4">
+            <button
+              onClick={handleRestart}
+              className="inline-flex items-center gap-2 px-5 py-2.5 border border-border hover:border-fg transition-colors font-semibold text-sm uppercase tracking-wide"
+            >
+              <RotateCcw size={14} /> Play Again
+            </button>
+            <button
+              onClick={handleShare}
+              disabled={generatingCard}
+              className="inline-flex items-center gap-2 px-5 py-2.5 bg-fg text-bg hover:bg-fg-dim transition-colors font-semibold text-sm uppercase tracking-wide disabled:opacity-60"
+            >
+              {generatingCard ? <Loader2 size={14} className="animate-spin" /> : <Share2 size={14} />}
+              Share Score
+            </button>
+          </div>
+          {cardDataUrl && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={cardDataUrl} alt="Your score card" className="mt-6 w-full border border-border" />
+          )}
         </div>
       </div>
     );
@@ -177,7 +350,7 @@ export default function SoloPlayClient({
 
   if (!question) return null;
 
-  const progressPct = ((current + (selected !== null ? 1 : 0)) / quiz!.questions.length) * 100;
+  const progressPct = ((current + (selected !== null ? 1 : 0)) / totalToAsk) * 100;
 
   return (
     <div className="min-h-screen flex items-center justify-center px-5 py-10">
@@ -188,7 +361,8 @@ export default function SoloPlayClient({
 
         <div className="flex items-center justify-between mb-6 font-mono text-xs text-muted">
           <span>
-            Question {current + 1} / {quiz!.questions.length}
+            Question {current + 1} / {totalToAsk}
+            {practiceMode && " · Practice"}
           </span>
           <span className="flex items-center gap-1.5">
             <Clock size={13} /> {timeLeft}s

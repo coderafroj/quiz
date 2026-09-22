@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowRight, Zap, Globe2, ShieldCheck, Users } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import DailyQuizBanner from "@/components/DailyQuizBanner";
 
 const FEATURES = [
   {
@@ -67,6 +68,8 @@ export default function Home() {
             </Link>
           </div>
         </div>
+
+        <DailyQuizBanner />
 
         <div className="max-w-5xl mx-auto grid sm:grid-cols-2 gap-4">
           {FEATURES.map((f) => (

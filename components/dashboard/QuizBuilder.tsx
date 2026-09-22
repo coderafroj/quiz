@@ -5,11 +5,12 @@ import { useRouter } from "next/navigation";
 import { Plus, Trash2, GripVertical, Save, Sparkles, Loader2 } from "lucide-react";
 import { createQuiz, updateQuiz } from "@/lib/quizzes";
 import { useAuth } from "@/context/AuthContext";
-import type { Quiz, QuizQuestionItem, QuizVisibility, QuizDifficulty } from "@/lib/types";
+import type { Quiz, QuizQuestionItem, QuizVisibility, QuizDifficulty, QuestionDifficulty } from "@/lib/types";
 
 const LANGUAGES = ["English", "Hindi", "Hinglish", "Spanish", "French", "Arabic", "Other"];
 const DIFFICULTIES: QuizDifficulty[] = ["Beginner", "Intermediate", "Advanced"];
 const TOPIC_SHORTCUTS = ["Python", "C", "C++", "Java", "JavaScript", "General Knowledge"];
+const QUESTION_DIFFICULTIES: QuestionDifficulty[] = ["easy", "medium", "hard"];
 
 function newQuestion(): QuizQuestionItem {
   return {
@@ -19,6 +20,7 @@ function newQuestion(): QuizQuestionItem {
     correctIndex: 0,
     timeLimit: 20,
     points: 1000,
+    difficulty: "medium",
   };
 }
 
@@ -77,6 +79,7 @@ export default function QuizBuilder({ existingQuiz }: { existingQuiz?: Quiz }) {
           correctIndex: q.correctIndex,
           timeLimit: 20,
           points: 1000,
+          difficulty: aiDifficulty as QuestionDifficulty,
         })
       );
 
@@ -374,7 +377,7 @@ export default function QuizBuilder({ existingQuiz }: { existingQuiz?: Quiz }) {
               ))}
             </div>
 
-            <div className="flex gap-4">
+            <div className="flex gap-4 flex-wrap">
               <div>
                 <label className="block font-mono text-[11px] text-muted uppercase mb-1">
                   Time Limit (sec)
@@ -401,7 +404,28 @@ export default function QuizBuilder({ existingQuiz }: { existingQuiz?: Quiz }) {
                   className="w-28 bg-transparent border border-border px-2 py-1.5 text-sm focus:border-fg outline-none"
                 />
               </div>
+              <div>
+                <label className="block font-mono text-[11px] text-muted uppercase mb-1">
+                  Question Difficulty
+                </label>
+                <select
+                  value={q.difficulty || "medium"}
+                  onChange={(e) =>
+                    updateQuestion(q.id, { difficulty: e.target.value as QuestionDifficulty })
+                  }
+                  className="w-32 bg-surface border border-border px-2 py-1.5 text-sm focus:border-fg outline-none capitalize"
+                >
+                  {QUESTION_DIFFICULTIES.map((d) => (
+                    <option key={d} value={d}>
+                      {d}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
+            <p className="font-mono text-[10px] text-muted mt-2">
+              Tag questions across easy/medium/hard so Solo Mode can adapt difficulty as someone plays.
+            </p>
           </div>
         ))}
       </div>

@@ -27,12 +27,21 @@ service cloud.firestore {
     }
 
     // Quizzes: publicly readable (so unauthenticated players can open a
-    // shared link and play solo). Only the owner or an admin can modify.
+    // shared link and play solo). Only the owner or an admin can fully
+    // edit a quiz. Two narrow exceptions, scoped to a single field each,
+    // so they can't be abused to rewrite quiz content:
+    //  - playCount: bumped by solo players, who are never logged in
+    //  - remixCount: bumped on the ORIGINAL quiz when someone else remixes
+    //    it into their own copy — the remixer isn't the owner, so the
+    //    general owner/admin rule alone would block this.
     match /quizzes/{quizId} {
       allow read: if true;
       allow create: if isSignedIn() && request.resource.data.ownerId == request.auth.uid;
-      allow update, delete: if isSignedIn() &&
-        (resource.data.ownerId == request.auth.uid || isAdmin());
+      allow update: if
+        (isSignedIn() && (resource.data.ownerId == request.auth.uid || isAdmin())) ||
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['playCount']) ||
+        (isSignedIn() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['remixCount']));
+      allow delete: if isSignedIn() && (resource.data.ownerId == request.auth.uid || isAdmin());
 
       // Solo-mode attempts: anyone (even signed out) can log a result;
       // nothing here is ever edited or deleted, only appended.

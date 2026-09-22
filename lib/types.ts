@@ -8,6 +8,8 @@ export interface UserProfile {
   createdAt: number;
 }
 
+export type QuestionDifficulty = "easy" | "medium" | "hard";
+
 export interface QuizQuestionItem {
   id: string;
   text: string;
@@ -15,6 +17,8 @@ export interface QuizQuestionItem {
   correctIndex: number;
   timeLimit: number; // seconds — used to drive the live-mode timer
   points: number; // base points awarded for a correct answer
+  /** Per-question difficulty — powers Adaptive Mode in solo play. Defaults to "medium" if unset (older quizzes). */
+  difficulty?: QuestionDifficulty;
 }
 
 export type QuizVisibility = "public" | "unlisted";
@@ -38,11 +42,20 @@ export interface Quiz {
   createdAt: number;
   updatedAt: number;
   playCount: number;
+  /** Set when this quiz was created via the "Remix" button on another quiz. */
+  remixedFrom?: string;
+  remixedFromTitle?: string;
+  /** How many people have remixed THIS quiz into their own copy. */
+  remixCount?: number;
 }
 
-export type QuizInput = Omit<Quiz, "id" | "createdAt" | "updatedAt" | "playCount" | "status">;
+export type QuizInput = Omit<
+  Quiz,
+  "id" | "createdAt" | "updatedAt" | "playCount" | "status" | "remixCount"
+>;
 
 export type SessionStatus = "lobby" | "question" | "reveal" | "ended";
+export type SessionMode = "classic" | "elimination";
 
 export interface LiveSession {
   code: string;
@@ -50,6 +63,7 @@ export interface LiveSession {
   quizTitle: string;
   hostId: string;
   status: SessionStatus;
+  mode: SessionMode;
   currentQuestionIndex: number;
   questionStartedAt: number | null;
   createdAt: number;
@@ -60,6 +74,8 @@ export interface LivePlayer {
   name: string;
   score: number;
   joinedAt: number;
+  /** Elimination mode only — true once this player has answered wrong (or missed) a question. */
+  eliminated?: boolean;
 }
 
 export interface LiveAnswer {
