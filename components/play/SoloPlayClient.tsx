@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useState, useCallback, useRef } from "react";
+import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { Check, X, Trophy, RotateCcw, Clock, Share2, Brain, Loader2 } from "lucide-react";
+import { Check, X, Trophy, RotateCcw, Clock, Share2, Brain, Loader2, LogIn } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
 import { getQuiz, incrementPlayCount } from "@/lib/quizzes";
 import { recordAttempt } from "@/lib/attempts";
 import { recordAnswerOutcome, getDueQuestionIds } from "@/lib/reviewQueue";
@@ -33,6 +35,7 @@ export default function SoloPlayClient({
   quizId: string;
   initialQuiz: Quiz | null;
 }) {
+  const { user, profile } = useAuth();
   const [quiz, setQuiz] = useState<Quiz | null>(initialQuiz);
   const [stage, setStage] = useState<Stage>(initialQuiz ? "name" : "loading");
   const [playerName, setPlayerName] = useState("");
@@ -70,6 +73,11 @@ export default function SoloPlayClient({
     // eslint-disable-next-line react-hooks/set-state-in-effect -- derived once from the freshly-loaded quiz, not a render loop
     setDueCount(getDueQuestionIds(quiz.id).length);
   }, [quiz]);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time prefill once the signed-in profile resolves
+    if (profile?.displayName) setPlayerName(profile.displayName);
+  }, [profile?.displayName]);
 
   function pickFromPools(pools: Record<Tier, QuizQuestionItem[]>, tier: Tier): QuizQuestionItem | null {
     for (const t of TIER_SEARCH_ORDER[tier]) {
@@ -255,20 +263,29 @@ export default function SoloPlayClient({
           </span>
           <h1 className="font-display font-extrabold text-2xl text-fg mb-2">{quiz?.title}</h1>
           {quiz?.description && <p className="text-fg-dim text-sm mb-6">{quiz.description}</p>}
-          <input
-            required
-            autoFocus
-            value={playerName}
-            onChange={(e) => setPlayerName(e.target.value)}
-            placeholder="Enter your name"
-            className="w-full bg-transparent border border-border px-3 py-3 text-sm text-center mb-4 focus:border-fg outline-none"
-          />
+
+          {user ? (
+            <p className="font-mono text-sm text-fg mb-4">
+              Playing as <strong>{playerName}</strong>
+            </p>
+          ) : (
+            <input
+              required
+              autoFocus
+              value={playerName}
+              onChange={(e) => setPlayerName(e.target.value)}
+              placeholder="Enter your name"
+              className="w-full bg-transparent border border-border px-3 py-3 text-sm text-center mb-4 focus:border-fg outline-none"
+            />
+          )}
+
           <button
             type="submit"
             className="w-full py-3 bg-fg text-bg font-semibold text-sm uppercase tracking-wide hover:bg-fg-dim transition-colors"
           >
             Start Quiz
           </button>
+
           {dueCount > 0 && (
             <button
               type="button"
@@ -277,6 +294,15 @@ export default function SoloPlayClient({
             >
               <Brain size={13} /> Practice {dueCount} Weak Spot{dueCount > 1 ? "s" : ""}
             </button>
+          )}
+
+          {!user && (
+            <Link
+              href={`/login?next=/play/${quizId}`}
+              className="mt-4 flex items-center justify-center gap-1.5 font-mono text-[11px] text-muted hover:text-fg transition-colors"
+            >
+              <LogIn size={12} /> Sign in to save your quiz history
+            </Link>
           )}
         </form>
       </div>

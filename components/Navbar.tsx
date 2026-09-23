@@ -35,6 +35,13 @@ export default function Navbar() {
                   Admin
                 </Link>
               )}
+              <Link
+                href="/profile"
+                title="Your profile"
+                className="w-7 h-7 rounded-full bg-fg text-bg flex items-center justify-center font-bold text-xs flex-shrink-0 hover:bg-fg-dim transition-colors"
+              >
+                {(profile?.displayName || "?").charAt(0).toUpperCase()}
+              </Link>
               <button
                 onClick={() => logout()}
                 className="flex items-center gap-1.5 px-2 sm:px-3 py-2 border border-border hover:invert-hover transition-colors whitespace-nowrap"

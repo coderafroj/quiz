@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Trash2, Users, ListChecks, Gamepad2, Pencil, Check, X, Clock } from "lucide-react";
+import { Trash2, Users, ListChecks, Gamepad2, Pencil, Check, X, Clock, Upload } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { subscribeToAllUsers } from "@/lib/users";
 import {
@@ -78,12 +78,22 @@ export default function AdminPage() {
       <Navbar />
       <main className="pt-28 pb-20 px-5 md:px-8 min-h-screen">
         <div className="max-w-6xl mx-auto">
-          <span className="font-mono text-xs tracking-widest text-muted uppercase block mb-2">
-            Platform Admin
-          </span>
-          <h1 className="font-display font-extrabold text-3xl md:text-4xl text-fg mb-10">
-            Everything, in one place.
-          </h1>
+          <div className="flex items-start justify-between gap-4 mb-10 flex-wrap">
+            <div>
+              <span className="font-mono text-xs tracking-widest text-muted uppercase block mb-2">
+                Platform Admin
+              </span>
+              <h1 className="font-display font-extrabold text-3xl md:text-4xl text-fg">
+                Everything, in one place.
+              </h1>
+            </div>
+            <Link
+              href="/admin/import"
+              className="flex items-center gap-2 px-4 py-2.5 border border-border hover:border-fg transition-colors text-xs font-mono uppercase whitespace-nowrap"
+            >
+              <Upload size={14} /> Import Starter Quizzes
+            </Link>
+          </div>
 
           <div className="grid sm:grid-cols-3 gap-4 mb-12">
             <div className="card-frame p-6 flex items-center gap-4">

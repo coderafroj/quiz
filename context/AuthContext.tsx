@@ -19,7 +19,7 @@ import {
   type User,
 } from "firebase/auth";
 import { auth, isFirebaseConfigured } from "@/lib/firebase";
-import { ensureUserProfile, subscribeToUserProfile } from "@/lib/users";
+import { ensureUserProfile, subscribeToUserProfile, updateDisplayName as updateDisplayNameInDb } from "@/lib/users";
 import type { UserProfile } from "@/lib/types";
 
 interface AuthContextValue {
@@ -30,6 +30,7 @@ interface AuthContextValue {
   login: (email: string, password: string) => Promise<void>;
   loginWithGoogle: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
+  updateDisplayName: (name: string) => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -104,8 +105,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await sendPasswordResetEmail(auth, email);
   }
 
+  async function updateDisplayName(name: string) {
+    if (!auth?.currentUser) throw new Error("You must be signed in.");
+    await updateProfile(auth.currentUser, { displayName: name });
+    await updateDisplayNameInDb(auth.currentUser.uid, name);
+  }
+
   return (
-    <AuthContext.Provider value={{ user, profile, loading, signup, login, loginWithGoogle, resetPassword, logout }}>
+    <AuthContext.Provider
+      value={{ user, profile, loading, signup, login, loginWithGoogle, resetPassword, updateDisplayName, logout }}
+    >
       {children}
     </AuthContext.Provider>
   );

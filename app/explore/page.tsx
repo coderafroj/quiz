@@ -2,14 +2,17 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { Search, Play, Radio } from "lucide-react";
+import { Search, Play, Radio, Star } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import RemixButton from "@/components/RemixButton";
-import { subscribeToPublicQuizzes } from "@/lib/quizzes";
+import { useAuth } from "@/context/AuthContext";
+import { subscribeToPublicQuizzes, setFeatured } from "@/lib/quizzes";
 import type { Quiz } from "@/lib/types";
 
 export default function ExplorePage() {
+  const { profile } = useAuth();
+  const isAdmin = profile?.role === "admin";
   const [quizzes, setQuizzes] = useState<Quiz[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -119,7 +122,24 @@ export default function ExplorePage() {
                 )}
                 <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   {items.map((quiz) => (
-                    <div key={quiz.id} className="card-frame p-5 flex flex-col gap-3">
+                    <div key={quiz.id} className="card-frame p-5 flex flex-col gap-3 relative">
+                      {isAdmin ? (
+                        <button
+                          onClick={() => setFeatured(quiz.id, !quiz.featured)}
+                          title={quiz.featured ? "Unfeature this quiz" : "Feature this quiz"}
+                          className={`absolute top-3 right-3 p-1.5 transition-colors ${
+                            quiz.featured ? "text-fg" : "text-muted hover:text-fg"
+                          }`}
+                        >
+                          <Star size={16} fill={quiz.featured ? "currentColor" : "none"} />
+                        </button>
+                      ) : (
+                        quiz.featured && (
+                          <span className="absolute top-3 right-3 text-fg">
+                            <Star size={16} fill="currentColor" />
+                          </span>
+                        )
+                      )}
                       <div>
                         <div className="flex items-center gap-2 mb-1 font-mono text-[11px] text-muted uppercase">
                           <span>{quiz.language}</span>
@@ -130,7 +150,7 @@ export default function ExplorePage() {
                           <span>·</span>
                           <span>{quiz.playCount} plays</span>
                         </div>
-                        <h3 className="font-display font-bold text-lg text-fg">{quiz.title}</h3>
+                        <h3 className="font-display font-bold text-lg text-fg pr-6">{quiz.title}</h3>
                         {quiz.description && (
                           <p className="text-fg-dim text-sm mt-1 line-clamp-2">
                             {quiz.description}

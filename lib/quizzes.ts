@@ -61,6 +61,12 @@ export async function rejectQuiz(id: string) {
   await updateDoc(doc(db, COLLECTION, id), { status: "rejected", updatedAt: Date.now() });
 }
 
+/** Admin-only spotlight toggle — featured quizzes are pinned to the top of /explore. */
+export async function setFeatured(id: string, featured: boolean) {
+  const db = requireDb();
+  await updateDoc(doc(db, COLLECTION, id), { featured });
+}
+
 /**
  * Forks a quiz into a brand-new copy owned by someone else — GitHub-style
  * remixing. Questions are deep-copied with fresh IDs so editing the remix
@@ -179,11 +185,14 @@ export function subscribeToPublicQuizzes(
   return onSnapshot(
     q,
     (snapshot) => {
-      onChange(
-        snapshot.docs
-          .map((d) => ({ id: d.id, ...(d.data() as Omit<Quiz, "id">) }))
-          .filter((quiz) => quiz.questions?.length > 0)
-      );
+      const quizzes = snapshot.docs
+        .map((d) => ({ id: d.id, ...(d.data() as Omit<Quiz, "id">) }))
+        .filter((quiz) => quiz.questions?.length > 0)
+        .sort((a, b) => {
+          if (!!a.featured !== !!b.featured) return a.featured ? -1 : 1;
+          return b.createdAt - a.createdAt;
+        });
+      onChange(quizzes);
     },
     (err) => onError?.(err as Error)
   );

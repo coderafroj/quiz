@@ -42,6 +42,8 @@ export interface Quiz {
   createdAt: number;
   updatedAt: number;
   playCount: number;
+  /** Admin-only spotlight — featured quizzes show first on /explore. */
+  featured?: boolean;
   /** Set when this quiz was created via the "Remix" button on another quiz. */
   remixedFrom?: string;
   remixedFromTitle?: string;

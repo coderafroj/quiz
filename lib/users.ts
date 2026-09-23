@@ -55,3 +55,8 @@ export function subscribeToAllUsers(onChange: (users: UserProfile[]) => void) {
     onChange(users);
   });
 }
+
+export async function updateDisplayName(uid: string, displayName: string) {
+  const db = requireDb();
+  await setDoc(doc(db, COLLECTION, uid), { displayName }, { merge: true });
+}
