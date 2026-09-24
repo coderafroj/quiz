@@ -34,11 +34,19 @@ export default function QuizBuilder({ existingQuiz }: { existingQuiz?: Quiz }) {
   const [category, setCategory] = useState(existingQuiz?.category || "General Knowledge");
   const [difficulty, setDifficulty] = useState<QuizDifficulty>(existingQuiz?.difficulty || "Beginner");
   const [visibility, setVisibility] = useState<QuizVisibility>(existingQuiz?.visibility || "unlisted");
+  const [shuffleOptions, setShuffleOptions] = useState(existingQuiz?.shuffleOptions ?? false);
   const [questions, setQuestions] = useState<QuizQuestionItem[]>(
     existingQuiz?.questions?.length ? existingQuiz.questions : [newQuestion()]
   );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // --- Bulk time-limit setter ---
+  const [bulkTime, setBulkTime] = useState(20);
+
+  function applyBulkTime() {
+    setQuestions((qs) => qs.map((q) => ({ ...q, timeLimit: bulkTime })));
+  }
 
   // --- AI quiz generation ---
   const [aiTopic, setAiTopic] = useState("");
@@ -147,6 +155,7 @@ export default function QuizBuilder({ existingQuiz }: { existingQuiz?: Quiz }) {
         difficulty,
         questions,
         visibility,
+        shuffleOptions,
       };
       if (existingQuiz) {
         // Never touch ownerId/ownerName here — an admin editing someone
@@ -277,6 +286,22 @@ export default function QuizBuilder({ existingQuiz }: { existingQuiz?: Quiz }) {
             </select>
           </div>
         </div>
+
+        <label className="flex items-center gap-2.5 pt-1 cursor-pointer select-none">
+          <input
+            type="checkbox"
+            checked={shuffleOptions}
+            onChange={(e) => setShuffleOptions(e.target.checked)}
+            className="w-4 h-4 accent-fg"
+          />
+          <span className="text-sm text-fg">
+            Shuffle answer options for each player
+            <span className="block font-mono text-[11px] text-muted">
+              Options show in a different order every attempt — makes it harder for players to
+              share &quot;the answer is option C&quot; while someone else is still playing.
+            </span>
+          </span>
+        </label>
       </div>
 
 
@@ -327,6 +352,29 @@ export default function QuizBuilder({ existingQuiz }: { existingQuiz?: Quiz }) {
           )}
         </button>
         {aiError && <p className="text-fg-dim text-xs font-mono">{aiError}</p>}
+      </div>
+
+      <div className="card-frame p-4 mb-4 flex flex-wrap items-end gap-3">
+        <div>
+          <label className="block font-mono text-[11px] text-muted uppercase mb-1">
+            Set Time Limit For All Questions
+          </label>
+          <input
+            type="number"
+            min={5}
+            max={120}
+            value={bulkTime}
+            onChange={(e) => setBulkTime(Number(e.target.value))}
+            className="w-28 bg-transparent border border-border px-2 py-1.5 text-sm focus:border-fg outline-none"
+          />
+        </div>
+        <button
+          type="button"
+          onClick={applyBulkTime}
+          className="px-4 py-2 border border-border hover:border-fg transition-colors text-xs font-mono uppercase"
+        >
+          Apply to All {questions.length} Question{questions.length > 1 ? "s" : ""}
+        </button>
       </div>
 
       <div className="space-y-4">

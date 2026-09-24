@@ -2,10 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { motion } from "framer-motion";
-import { Check, Clock, Trophy, Users, Skull } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Check, Clock, Trophy, Users, Skull, ShieldAlert } from "lucide-react";
 import { getQuiz } from "@/lib/quizzes";
 import { subscribeToSession, subscribeToPlayers, submitAnswer } from "@/lib/sessions";
+import { useAntiCheat } from "@/lib/useAntiCheat";
 import type { Quiz, LiveSession, LivePlayer } from "@/lib/types";
 
 const SHAPES = ["▲", "◆", "●", "■"];
@@ -67,6 +68,8 @@ export default function LivePlayerPage() {
     return () => clearInterval(interval);
   }, [session?.status, session?.questionStartedAt, session?.currentQuestionIndex, quiz]);
 
+  const { warning } = useAntiCheat(session?.status === "question");
+
   if (!playerId || !session || !quiz) {
     return (
       <div className="min-h-screen flex items-center justify-center font-mono text-sm text-muted">
@@ -123,15 +126,27 @@ export default function LivePlayerPage() {
 
     return (
       <div className="min-h-screen flex flex-col items-center justify-center px-5 py-10">
+        <AnimatePresence>
+          {warning && (
+            <motion.div
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              className="flex items-center gap-2 mb-4 px-3 py-2 border border-border-strong text-fg-dim font-mono text-[11px]"
+            >
+              <ShieldAlert size={13} className="flex-shrink-0" /> {warning}
+            </motion.div>
+          )}
+        </AnimatePresence>
         {!hasAnswered ? (
           <>
             <div className="flex items-center gap-2 mb-6 font-mono text-sm text-fg">
               <Clock size={14} /> {timeLeft}s
             </div>
-            <h1 className="font-display font-bold text-xl md:text-2xl text-fg text-center max-w-lg mb-8">
+            <h1 className="font-display font-bold text-xl md:text-2xl text-fg text-center max-w-lg mb-8 quiz-noselect" onCopy={(e) => e.preventDefault()}>
               {question.text}
             </h1>
-            <div className="grid grid-cols-2 gap-3 w-full max-w-md">
+            <div className="grid grid-cols-2 gap-3 w-full max-w-md quiz-noselect" onCopy={(e) => e.preventDefault()}>
               {question.options.map((opt, idx) => (
                 <button
                   key={idx}

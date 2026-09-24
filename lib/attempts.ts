@@ -11,13 +11,15 @@ export async function recordAttempt(
   quizId: string,
   playerName: string,
   score: number,
-  total: number
+  total: number,
+  tabSwitchCount = 0
 ) {
   await addDoc(attemptsRef(quizId), {
     playerName,
     score,
     total,
     completedAt: Date.now(),
+    tabSwitchCount,
   });
 }
 

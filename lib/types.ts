@@ -49,6 +49,8 @@ export interface Quiz {
   remixedFromTitle?: string;
   /** How many people have remixed THIS quiz into their own copy. */
   remixCount?: number;
+  /** When true, each question's options are shown in a random order per player/attempt — makes it harder to share "the answer is option X" while someone else is playing. */
+  shuffleOptions?: boolean;
 }
 
 export type QuizInput = Omit<
@@ -97,4 +99,6 @@ export interface SoloAttempt {
   score: number;
   total: number;
   completedAt: number;
+  /** Number of suspicious events (tab switches, copy attempts, etc.) noticed while this attempt was in progress. Shown to the quiz owner as a soft cheating signal — not proof, just a flag. */
+  tabSwitchCount?: number;
 }

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { Trophy, ArrowLeft } from "lucide-react";
+import { Trophy, ArrowLeft, ShieldAlert } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { getQuiz } from "@/lib/quizzes";
 import { subscribeToLeaderboard } from "@/lib/attempts";
@@ -63,7 +63,14 @@ export default function QuizResultsPage() {
                   <span className="font-mono text-sm text-muted w-6">
                     {i === 0 ? <Trophy size={16} className="text-fg" /> : `#${i + 1}`}
                   </span>
-                  <span className="flex-1 font-semibold text-fg">{a.playerName}</span>
+                  <span className="flex-1 font-semibold text-fg flex items-center gap-1.5">
+                    {a.playerName}
+                    {!!a.tabSwitchCount && (
+                      <span title={`${a.tabSwitchCount} suspicious event(s) during this attempt — possible cheating.`}>
+                        <ShieldAlert size={13} className="text-fg-dim" />
+                      </span>
+                    )}
+                  </span>
                   <span className="font-mono text-sm text-fg-dim">
                     {a.score} / {a.total}
                   </span>

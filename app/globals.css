@@ -126,3 +126,19 @@ body {
 }
 
 @keyframes blink { 50% { opacity: 0; } }
+
+/* Anti-cheat: stops the OS text-selection handles from appearing at all on
+   a long-press (phone), which is what triggers the "Ask Gemini / Search
+   with Google" popup on selected text. Needs every vendor prefix — plain
+   `user-select: none` alone is unreliable on some Android/iOS browsers.
+   Does NOT and cannot stop screenshot-based assistants (e.g. Android
+   "Circle to Search" invoked from the nav bar) — those read the screen as
+   a picture, not as page text, so no website can block them. */
+.quiz-noselect {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none; /* iOS: kills the long-press "Copy / Look Up / Translate" menu */
+  -webkit-tap-highlight-color: transparent;
+}

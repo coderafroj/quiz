@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useState, useCallback, useRef } from "react";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Check, X, Trophy, RotateCcw, Clock, Share2, Brain, Loader2, LogIn } from "lucide-react";
+import { Check, X, Trophy, RotateCcw, Clock, Share2, Brain, Loader2, ShieldAlert } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { getQuiz, incrementPlayCount } from "@/lib/quizzes";
 import { recordAttempt } from "@/lib/attempts";
@@ -11,6 +11,7 @@ import { recordAnswerOutcome, getDueQuestionIds } from "@/lib/reviewQueue";
 import { generateScoreCard, shareScoreCard } from "@/lib/scoreCard";
 import { pickTodaysQuiz, recordDailyCompletion } from "@/lib/dailyQuiz";
 import { getApprovedQuizzesOnce } from "@/lib/quizzes";
+import { useAntiCheat, shuffleQuestionOptions } from "@/lib/useAntiCheat";
 import type { Quiz, QuizQuestionItem, QuestionDifficulty } from "@/lib/types";
 
 type Stage = "loading" | "not-found" | "name" | "playing" | "finished";
@@ -35,7 +36,8 @@ export default function SoloPlayClient({
   quizId: string;
   initialQuiz: Quiz | null;
 }) {
-  const { user, profile } = useAuth();
+  const { user, profile, loading: authLoading } = useAuth();
+  const router = useRouter();
   const [quiz, setQuiz] = useState<Quiz | null>(initialQuiz);
   const [stage, setStage] = useState<Stage>(initialQuiz ? "name" : "loading");
   const [playerName, setPlayerName] = useState("");
@@ -79,6 +81,18 @@ export default function SoloPlayClient({
     if (profile?.displayName) setPlayerName(profile.displayName);
   }, [profile?.displayName]);
 
+  // Playing solo now requires an account — send anyone not signed in to
+  // login/signup and bring them straight back to this quiz afterwards.
+  useEffect(() => {
+    if (authLoading) return;
+    if (!user && (stage === "name" || stage === "playing")) {
+      router.replace(`/login?next=${encodeURIComponent(`/play/${quizId}`)}`);
+    }
+  }, [authLoading, user, stage, quizId, router]);
+
+  // Soft anti-cheat: active only while a question is actually on screen.
+  const { violations, warning } = useAntiCheat(stage === "playing");
+
   function pickFromPools(pools: Record<Tier, QuizQuestionItem[]>, tier: Tier): QuizQuestionItem | null {
     for (const t of TIER_SEARCH_ORDER[tier]) {
       const candidates = pools[t].filter((q) => !usedIdsRef.current.has(q.id));
@@ -96,6 +110,13 @@ export default function SoloPlayClient({
   }
 
   const question = askedQuestions[current];
+
+  // Applies the quiz's "shuffle options" setting (if on) to a question right
+  // before it's shown — a fresh random order each time, correctIndex remapped.
+  const withShuffle = useCallback(
+    (q: QuizQuestionItem) => (quiz?.shuffleOptions ? shuffleQuestionOptions(q) : q),
+    [quiz?.shuffleOptions]
+  );
 
   function startPlay(usePractice: boolean) {
     if (!quiz) return;
@@ -115,14 +136,14 @@ export default function SoloPlayClient({
 
     if (usePractice) {
       // Practice mode: just work through the due set directly, no adaptive reshuffling needed.
-      setAskedQuestions(pool);
+      setAskedQuestions(pool.map(withShuffle));
       pool.forEach((q) => usedIdsRef.current.add(q.id));
       setWasAdaptiveUsed(false);
     } else {
       const pools = buildPools(pool);
       const first = pickFromPools(pools, "medium") || pool[0];
       usedIdsRef.current.add(first.id);
-      setAskedQuestions([first]);
+      setAskedQuestions([withShuffle(first)]);
       // Adaptive only matters if there's more than one difficulty tier present.
       setWasAdaptiveUsed(new Set(pool.map(questionTier)).size > 1);
     }
@@ -140,7 +161,7 @@ export default function SoloPlayClient({
     if (isLast) {
       setStage("finished");
       incrementPlayCount(quiz.id).catch(() => {});
-      recordAttempt(quiz.id, playerName, score, totalToAsk).catch(() => {});
+      recordAttempt(quiz.id, playerName, score, totalToAsk, violations).catch(() => {});
 
       getApprovedQuizzesOnce().then((quizzes) => {
         const todays = pickTodaysQuiz(quizzes);
@@ -156,12 +177,12 @@ export default function SoloPlayClient({
       const next = pickFromPools(pools, tierRef.current);
       if (next) {
         usedIdsRef.current.add(next.id);
-        setAskedQuestions((prev) => [...prev, next]);
+        setAskedQuestions((prev) => [...prev, withShuffle(next)]);
       }
     }
     setCurrent((c) => c + 1);
     setSelected(null);
-  }, [quiz, current, playerName, score, practiceMode, totalToAsk]);
+  }, [quiz, current, playerName, score, practiceMode, totalToAsk, violations, withShuffle]);
 
   useEffect(() => {
     if (stage !== "playing" || !question) return;
@@ -254,6 +275,16 @@ export default function SoloPlayClient({
     );
   }
 
+  if (stage === "name" && (authLoading || !user)) {
+    // Redirect to login is already in flight (see effect above) — avoid
+    // flashing the play form for a split second before it fires.
+    return (
+      <div className="min-h-screen flex items-center justify-center font-mono text-sm text-muted">
+        Taking you to sign in…
+      </div>
+    );
+  }
+
   if (stage === "name") {
     return (
       <div className="min-h-screen flex items-center justify-center px-5">
@@ -264,20 +295,14 @@ export default function SoloPlayClient({
           <h1 className="font-display font-extrabold text-2xl text-fg mb-2">{quiz?.title}</h1>
           {quiz?.description && <p className="text-fg-dim text-sm mb-6">{quiz.description}</p>}
 
-          {user ? (
-            <p className="font-mono text-sm text-fg mb-4">
-              Playing as <strong>{playerName}</strong>
-            </p>
-          ) : (
-            <input
-              required
-              autoFocus
-              value={playerName}
-              onChange={(e) => setPlayerName(e.target.value)}
-              placeholder="Enter your name"
-              className="w-full bg-transparent border border-border px-3 py-3 text-sm text-center mb-4 focus:border-fg outline-none"
-            />
-          )}
+          <input
+            required
+            autoFocus
+            value={playerName}
+            onChange={(e) => setPlayerName(e.target.value)}
+            placeholder="Enter your name"
+            className="w-full bg-transparent border border-border px-3 py-3 text-sm text-center mb-4 focus:border-fg outline-none"
+          />
 
           <button
             type="submit"
@@ -294,15 +319,6 @@ export default function SoloPlayClient({
             >
               <Brain size={13} /> Practice {dueCount} Weak Spot{dueCount > 1 ? "s" : ""}
             </button>
-          )}
-
-          {!user && (
-            <Link
-              href={`/login?next=/play/${quizId}`}
-              className="mt-4 flex items-center justify-center gap-1.5 font-mono text-[11px] text-muted hover:text-fg transition-colors"
-            >
-              <LogIn size={12} /> Sign in to save your quiz history
-            </Link>
           )}
         </form>
       </div>
@@ -381,6 +397,19 @@ export default function SoloPlayClient({
   return (
     <div className="min-h-screen flex items-center justify-center px-5 py-10">
       <div className="w-full max-w-2xl">
+        <AnimatePresence>
+          {warning && (
+            <motion.div
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              className="flex items-center gap-2 mb-4 px-3 py-2 border border-border-strong text-fg-dim font-mono text-[11px]"
+            >
+              <ShieldAlert size={13} className="flex-shrink-0" /> {warning}
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         <div className="h-1 bg-border mb-8 relative overflow-hidden">
           <motion.div className="h-full bg-fg" animate={{ width: `${progressPct}%` }} transition={{ duration: 0.3 }} />
         </div>
@@ -402,6 +431,8 @@ export default function SoloPlayClient({
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -16 }}
             transition={{ duration: 0.3 }}
+            className="quiz-noselect"
+            onCopy={(e) => e.preventDefault()}
           >
             <h2 className="font-display font-bold text-2xl md:text-3xl text-fg mb-8">
               {question.text}
