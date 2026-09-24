@@ -1,8 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { Search, Play, Radio, Star } from "lucide-react";
+import { useSearchParams } from "next/navigation";
+import { Search, Play, Radio, Star, Code2, BookOpen } from "lucide-react";
+import { SiPython, SiCplusplus, SiOpenjdk, SiJavascript } from "@icons-pack/react-simple-icons";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import RemixButton from "@/components/RemixButton";
@@ -10,8 +12,25 @@ import { useAuth } from "@/context/AuthContext";
 import { subscribeToPublicQuizzes, setFeatured } from "@/lib/quizzes";
 import type { Quiz } from "@/lib/types";
 
-export default function ExplorePage() {
+const TOPIC_ICONS: Record<string, React.ElementType> = {
+  python: SiPython,
+  "c++": SiCplusplus,
+  cpp: SiCplusplus,
+  java: SiOpenjdk,
+  javascript: SiJavascript,
+  js: SiJavascript,
+};
+
+function TopicIcon({ category, size = 14 }: { category: string; size?: number }) {
+  const key = category.trim().toLowerCase();
+  if (key === "general knowledge") return <BookOpen size={size} />;
+  const Icon = TOPIC_ICONS[key];
+  return Icon ? <Icon size={size} /> : <Code2 size={size} />;
+}
+
+function ExploreContent() {
   const { profile } = useAuth();
+  const searchParams = useSearchParams();
   const isAdmin = profile?.role === "admin";
   const [quizzes, setQuizzes] = useState<Quiz[]>([]);
   const [loading, setLoading] = useState(true);
@@ -29,13 +48,24 @@ export default function ExplorePage() {
     return () => unsub();
   }, []);
 
-  const categories = useMemo(() => {
-    const set = new Set<string>();
+  useEffect(() => {
+    const fromUrl = searchParams.get("category");
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time preselect from a shared/linked URL, not a render loop
+    if (fromUrl) setActiveCategory(fromUrl);
+  }, [searchParams]);
+
+  const categoryCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
     quizzes.forEach((q) => {
-      if (q.category?.trim()) set.add(q.category.trim());
+      const cat = q.category?.trim();
+      if (cat) counts[cat] = (counts[cat] || 0) + 1;
     });
-    return ["All", ...Array.from(set).sort((a, b) => a.localeCompare(b))];
+    return counts;
   }, [quizzes]);
+
+  const categories = useMemo(() => {
+    return ["All", ...Object.keys(categoryCounts).sort((a, b) => a.localeCompare(b))];
+  }, [categoryCounts]);
 
   const filtered = useMemo(() => {
     return quizzes.filter((q) => {
@@ -91,13 +121,19 @@ export default function ExplorePage() {
               <button
                 key={cat}
                 onClick={() => setActiveCategory(cat)}
-                className={`px-3.5 py-1.5 font-mono text-xs uppercase tracking-wide border transition-colors ${
+                className={`flex items-center gap-1.5 px-3.5 py-1.5 font-mono text-xs uppercase tracking-wide border transition-colors ${
                   activeCategory === cat
                     ? "bg-fg text-bg border-fg"
                     : "border-border text-muted hover:border-fg hover:text-fg"
                 }`}
               >
+                {cat !== "All" && <TopicIcon category={cat} size={13} />}
                 {cat}
+                {cat !== "All" && (
+                  <span className={activeCategory === cat ? "text-bg/60" : "text-muted"}>
+                    {categoryCounts[cat]}
+                  </span>
+                )}
               </button>
             ))}
           </div>
@@ -116,8 +152,10 @@ export default function ExplorePage() {
             {Object.entries(grouped).map(([category, items]) => (
               <section key={category}>
                 {activeCategory === "All" && (
-                  <h2 className="font-mono text-xs uppercase tracking-widest text-muted mb-4 border-b border-border pb-2">
+                  <h2 className="flex items-center gap-2 font-mono text-xs uppercase tracking-widest text-muted mb-4 border-b border-border pb-2">
+                    <TopicIcon category={category} />
                     {category}
+                    <span className="text-muted/60">({items.length})</span>
                   </h2>
                 )}
                 <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -192,5 +230,13 @@ export default function ExplorePage() {
       </main>
       <Footer />
     </>
+  );
+}
+
+export default function ExplorePage() {
+  return (
+    <Suspense fallback={null}>
+      <ExploreContent />
+    </Suspense>
   );
 }

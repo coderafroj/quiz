@@ -1,8 +1,17 @@
 import Link from "next/link";
-import { ArrowRight, Zap, Globe2, ShieldCheck, Users } from "lucide-react";
+import { ArrowRight, Zap, Globe2, ShieldCheck, Users, BookOpen, Code2 } from "lucide-react";
+import { SiPython, SiCplusplus, SiOpenjdk } from "@icons-pack/react-simple-icons";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import DailyQuizBanner from "@/components/DailyQuizBanner";
+
+const TOPICS = [
+  { name: "Python", icon: SiPython },
+  { name: "C", icon: Code2 },
+  { name: "C++", icon: SiCplusplus },
+  { name: "Java", icon: SiOpenjdk },
+  { name: "General Knowledge", icon: BookOpen },
+];
 
 const FEATURES = [
   {
@@ -70,6 +79,24 @@ export default function Home() {
         </div>
 
         <DailyQuizBanner />
+
+        <div className="max-w-3xl mx-auto text-center mb-16">
+          <p className="font-mono text-xs uppercase tracking-widest text-muted mb-4">
+            Browse by Topic
+          </p>
+          <div className="flex flex-wrap gap-3 justify-center">
+            {TOPICS.map((t) => (
+              <Link
+                key={t.name}
+                href={`/explore?category=${encodeURIComponent(t.name)}`}
+                className="flex items-center gap-2 px-4 py-2.5 border border-border text-fg-dim hover:border-fg hover:text-fg transition-colors text-sm font-medium"
+              >
+                <t.icon size={16} />
+                {t.name}
+              </Link>
+            ))}
+          </div>
+        </div>
 
         <div className="max-w-5xl mx-auto grid sm:grid-cols-2 gap-4">
           {FEATURES.map((f) => (
