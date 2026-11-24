@@ -128,3 +128,19 @@ firebase.json / .firebaserc        → pre-linked to codrafroj-quiz
 
 Any step you get stuck on, just ask.
 # quiz
+
+---
+
+## What's new (O Level edition)
+
+- **NIELIT O Level section** (`/olevel`, `/olevel/m1..m4`): 4 papers, 24 unit quizzes, 4 full mock tests, 371 original MCQs. Built-in, works even before importing.
+- **Progress tracking**: best score / attempts per quiz, readiness meter, synced to `users/{uid}/progress`.
+- **Admin**: learner insights (funnel per unit, recent activity), idempotent importer, duplicate cleaner (`/admin/duplicates`).
+- **Security**: hardened `firestore.rules` (no self-promotion to admin, no self-approval, validated writes), AI route needs sign-in + rate limit, security headers.
+- **SEO / perf**: per-page metadata, JSON-LD (Course, FAQ, Breadcrumb), sitemap incl. O Level, PWA manifest, mobile bottom tab bar.
+
+### Deploy checklist
+1. `firebase deploy --only firestore:rules` (required for progress tracking and insights).
+2. Set `GROQ_API_KEY` (optionally `GEMINI_API_KEY`, `OPENROUTER_API_KEY`) in Vercel for AI quiz generation.
+3. Open `/admin/import` once to import O Level + starter quizzes (safe to press again, never duplicates).
+4. Open `/admin/duplicates` and delete the old duplicate quizzes made by earlier imports.

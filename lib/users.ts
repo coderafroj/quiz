@@ -28,8 +28,18 @@ export async function ensureUserProfile(
     role,
     createdAt: Date.now(),
   };
-  await setDoc(ref, profile);
-  return { uid, ...profile };
+  try {
+    await setDoc(ref, profile);
+    return { uid, ...profile };
+  } catch (err) {
+    // Rules only allow "admin" for a VERIFIED owner email. If this was an
+    // unverified email/password signup, fall back to a normal account
+    // instead of failing the whole login.
+    if (role !== "admin") throw err;
+    const fallback = { ...profile, role: "user" as UserRole };
+    await setDoc(ref, fallback);
+    return { uid, ...fallback };
+  }
 }
 
 export function subscribeToUserProfile(

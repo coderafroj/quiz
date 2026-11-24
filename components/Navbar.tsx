@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useAuth } from "@/context/AuthContext";
 import { LogOut, LayoutDashboard } from "lucide-react";
 
@@ -10,15 +11,21 @@ export default function Navbar() {
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-bg/85 backdrop-blur-md border-b border-border">
       <div className="max-w-6xl mx-auto px-5 md:px-8 flex items-center justify-between h-16">
-        <Link href="/" className="font-display font-bold text-lg tracking-tight text-fg">
-          CODARAFROJ <span className="text-muted font-normal">PLAY</span>
+        <Link href="/" className="flex items-center gap-2.5 font-display font-bold text-base sm:text-lg tracking-tight text-fg">
+          <Image src="/logo-mark.svg" alt="" width={26} height={26} unoptimized priority />
+          <span>
+            CODARAFROJ <span className="text-muted font-normal">PLAY</span>
+          </span>
         </Link>
 
         <div className="flex items-center gap-1.5 sm:gap-3 font-mono text-[10px] sm:text-xs uppercase tracking-widest">
-          <Link href="/explore" className="px-2 sm:px-3 py-2 text-muted hover:text-fg transition-colors whitespace-nowrap">
+          <Link href="/olevel" className="px-2 sm:px-3 py-2 text-fg hover:text-fg-dim transition-colors whitespace-nowrap">
+            O Level
+          </Link>
+          <Link href="/explore" className="hidden sm:block px-2 sm:px-3 py-2 text-muted hover:text-fg transition-colors whitespace-nowrap">
             Explore
           </Link>
-          <Link href="/join" className="px-2 sm:px-3 py-2 text-muted hover:text-fg transition-colors whitespace-nowrap">
+          <Link href="/join" className="hidden sm:block px-2 sm:px-3 py-2 text-muted hover:text-fg transition-colors whitespace-nowrap">
             <span className="sm:hidden">Join</span>
             <span className="hidden sm:inline">Join a Game</span>
           </Link>

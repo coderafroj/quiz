@@ -1,5 +1,14 @@
 import type { QuizInput, QuizQuestionItem } from "./types";
 
+function hashText(str: string): string {
+  let h = 2166136261;
+  for (let i = 0; i < str.length; i++) {
+    h ^= str.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return (h >>> 0).toString(36);
+}
+
 function q(
   text: string,
   options: string[],
@@ -8,7 +17,7 @@ function q(
   points = 1000
 ): QuizQuestionItem {
   return {
-    id: crypto.randomUUID(),
+    id: `q-${hashText(text)}`,
     text,
     options,
     correctIndex,
@@ -126,3 +135,16 @@ export const SEED_QUIZZES: SeedQuiz[] = [
     ],
   },
 ];
+
+const slugify = (t: string) =>
+  t
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+
+/** Every starter quiz with a stable document id, so re-importing can never create duplicates. */
+export const GENERAL_SEEDS: (SeedQuiz & { seedId: string; group: string })[] = SEED_QUIZZES.map((quiz) => ({
+  ...quiz,
+  seedId: `seed-${slugify(quiz.title)}`,
+  group: "Starter quizzes",
+}));

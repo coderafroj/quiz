@@ -6,6 +6,7 @@ import {
   doc,
   getDoc,
   getDocs,
+  setDoc,
   onSnapshot,
   orderBy,
   query,
@@ -34,6 +35,26 @@ export async function createQuiz(input: QuizInput, isAdminAuthor: boolean): Prom
     playCount: 0,
   });
   return ref.id;
+}
+
+/**
+ * Idempotent create with a fixed document id — used by the starter/O Level
+ * importer. If a document with this id already exists nothing is written and
+ * `false` is returned, so pressing "Import" ten times still leaves ONE copy.
+ */
+export async function createQuizWithId(id: string, input: QuizInput, isAdminAuthor: boolean): Promise<boolean> {
+  const db = requireDb();
+  const ref = doc(db, COLLECTION, id);
+  const existing = await getDoc(ref);
+  if (existing.exists()) return false;
+  await setDoc(ref, {
+    ...input,
+    status: isAdminAuthor ? "approved" : "pending",
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+    playCount: 0,
+  });
+  return true;
 }
 
 export async function updateQuiz(id: string, input: Partial<QuizInput>) {

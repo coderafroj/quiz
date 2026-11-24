@@ -3,6 +3,13 @@ rules_version = '2';
 // This is its own Firebase project (codrafroj-quiz), separate from the
 // coderafroj.me portfolio's project. Deploy with:
 //   firebase deploy --only firestore:rules
+//
+// SECURITY NOTES
+//  - Nobody can grant themselves "admin": the role is fixed at profile
+//    creation (owner email, verified) and cannot be changed by the user.
+//  - Non-admins cannot publish straight to "approved" or "featured".
+//  - Counters (playCount / remixCount) can only go up by exactly 1.
+//  - Writes are size/shape-validated so the database can't be filled with junk.
 
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -16,61 +23,128 @@ service cloud.firestore {
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
-    // User profiles: anyone signed in can read (needed for admin views,
-    // and for showing quiz owner names); only the owner can create/update
-    // their own profile.
-    match /users/{uid} {
-      allow read: if isSignedIn();
-      allow create: if isSignedIn() && request.auth.uid == uid;
-      allow update: if isSignedIn() && (request.auth.uid == uid || isAdmin());
-      allow delete: if false;
+    // Keep in sync with OWNER_EMAILS in lib/users.ts. The address must be
+    // verified (Google sign-in is), so nobody can claim it with a fake signup.
+    function isVerifiedOwner() {
+      return isSignedIn() &&
+        request.auth.token.email_verified == true &&
+        request.auth.token.email in ['codarafroj@gmail.com'];
     }
 
-    // Quizzes: publicly readable (so unauthenticated players can open a
-    // shared link and play solo). Only the owner or an admin can fully
-    // edit a quiz. Two narrow exceptions, scoped to a single field each,
-    // so they can't be abused to rewrite quiz content:
-    //  - playCount: bumped by solo players, who are never logged in
-    //  - remixCount: bumped on the ORIGINAL quiz when someone else remixes
-    //    it into their own copy — the remixer isn't the owner, so the
-    //    general owner/admin rule alone would block this.
+    function shortString(v, max) {
+      return v is string && v.size() > 0 && v.size() <= max;
+    }
+
+    // ---- Users --------------------------------------------------------
+    match /users/{uid} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && request.auth.uid == uid &&
+        (request.resource.data.role == 'user' ||
+          (request.resource.data.role == 'admin' && isVerifiedOwner()));
+      // A user may edit their own profile but never change their role.
+      allow update: if isAdmin() ||
+        (isSignedIn() && request.auth.uid == uid &&
+          request.resource.data.role == resource.data.role);
+      allow delete: if false;
+
+      // Per-learner quiz progress (best score, attempts, last result).
+      match /progress/{quizId} {
+        allow read: if isSignedIn() && (request.auth.uid == uid || isAdmin());
+        allow create, update: if isSignedIn() && request.auth.uid == uid &&
+          request.resource.data.keys().hasOnly(
+            ['quizId', 'uid', 'userName', 'title', 'best', 'total', 'attempts', 'lastScore', 'lastAt']) &&
+          request.resource.data.best is int && request.resource.data.total is int &&
+          request.resource.data.best >= 0 && request.resource.data.best <= request.resource.data.total &&
+          request.resource.data.total <= 200;
+        allow delete: if false;
+      }
+    }
+
+    // Admin dashboard: read every learner's progress.
+    match /{path=**}/progress/{id} {
+      allow read: if isAdmin();
+    }
+
+    // ---- Quizzes ------------------------------------------------------
     match /quizzes/{quizId} {
       allow read: if true;
-      allow create: if isSignedIn() && request.resource.data.ownerId == request.auth.uid;
-      allow update: if
-        (isSignedIn() && (resource.data.ownerId == request.auth.uid || isAdmin())) ||
-        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['playCount']) ||
-        (isSignedIn() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['remixCount']));
+
+      allow create: if isSignedIn() && request.resource.data.ownerId == request.auth.uid &&
+        (isAdmin() ||
+          (request.resource.data.status == 'pending' &&
+            request.resource.data.get('featured', false) == false &&
+            request.resource.data.get('playCount', 0) == 0));
+
+      allow update:
+        // admins can do anything
+        if isAdmin() ||
+        // owners can edit content but not ownership, moderation status or the featured flag
+        (isSignedIn() && resource.data.ownerId == request.auth.uid &&
+          request.resource.data.ownerId == resource.data.ownerId &&
+          request.resource.data.status == resource.data.status &&
+          request.resource.data.get('featured', false) == resource.data.get('featured', false)) ||
+        // anyone can bump the play counter by exactly 1
+        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['playCount']) &&
+          request.resource.data.playCount == resource.data.get('playCount', 0) + 1) ||
+        // a signed-in remixer bumps the original's remix counter by exactly 1
+        (isSignedIn() &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['remixCount']) &&
+          request.resource.data.remixCount == resource.data.get('remixCount', 0) + 1);
+
       allow delete: if isSignedIn() && (resource.data.ownerId == request.auth.uid || isAdmin());
 
-      // Solo-mode attempts: anyone (even signed out) can log a result;
-      // nothing here is ever edited or deleted, only appended.
+      // Solo attempts: signed-in players append a validated result.
       match /attempts/{attemptId} {
         allow read: if true;
-        allow create: if true;
+        allow create: if isSignedIn() &&
+          request.resource.data.keys().hasOnly(['playerName', 'score', 'total', 'completedAt', 'tabSwitchCount']) &&
+          shortString(request.resource.data.playerName, 60) &&
+          request.resource.data.score is int && request.resource.data.total is int &&
+          request.resource.data.score >= 0 && request.resource.data.score <= request.resource.data.total &&
+          request.resource.data.total <= 200 &&
+          request.resource.data.get('tabSwitchCount', 0) is int &&
+          request.resource.data.get('tabSwitchCount', 0) >= 0 &&
+          request.resource.data.get('tabSwitchCount', 0) <= 10000;
         allow update, delete: if false;
       }
     }
 
-    // Live sessions: intentionally open to unauthenticated players, since
-    // joining a live game never requires an account — only creating a quiz
-    // and hosting does. This is a deliberate v1 trade-off: anyone with a
-    // session code can read/write player + answer documents within it.
+    // ---- Live sessions --------------------------------------------------
+    // Joining a live game never requires an account (deliberate), so players
+    // and answers stay open — but every write is shape- and range-checked.
     match /sessions/{code} {
       allow read: if true;
-      allow create: if isSignedIn();
-      allow update: if isSignedIn() && resource.data.hostId == request.auth.uid;
+      allow create: if isSignedIn() && request.resource.data.hostId == request.auth.uid;
+      allow update: if isSignedIn() && resource.data.hostId == request.auth.uid &&
+        request.resource.data.hostId == resource.data.hostId;
       allow delete: if false;
 
       match /players/{playerId} {
         allow read: if true;
-        allow create, update: if true;
+        allow create: if request.resource.data.keys().hasOnly(['name', 'score', 'eliminated', 'joinedAt']) &&
+          shortString(request.resource.data.name, 30) &&
+          request.resource.data.score == 0 && request.resource.data.eliminated == false;
+        // players can only raise their own score by a bounded step; the host can edit anything (e.g. eliminate)
+        allow update: if
+          (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['score']) &&
+            request.resource.data.score >= resource.data.score &&
+            request.resource.data.score - resource.data.score <= 5000) ||
+          (isSignedIn() &&
+            get(/databases/$(database)/documents/sessions/$(code)).data.hostId == request.auth.uid);
         allow delete: if false;
       }
 
       match /answers/{answerId} {
         allow read: if true;
-        allow create: if true;
+        allow create: if
+          request.resource.data.keys().hasOnly(
+            ['playerId', 'playerName', 'questionIndex', 'selectedIndex', 'correct', 'pointsEarned', 'answeredAt', 'serverTime']) &&
+          shortString(request.resource.data.playerName, 30) &&
+          request.resource.data.questionIndex is int && request.resource.data.questionIndex >= 0 &&
+          request.resource.data.selectedIndex is int && request.resource.data.selectedIndex >= 0 &&
+          request.resource.data.selectedIndex <= 9 &&
+          request.resource.data.pointsEarned is int && request.resource.data.pointsEarned >= 0 &&
+          request.resource.data.pointsEarned <= 5000;
         allow update, delete: if false;
       }
     }

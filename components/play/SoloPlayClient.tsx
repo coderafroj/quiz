@@ -1,12 +1,15 @@
 "use client";
 
 import { useEffect, useState, useCallback, useRef } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Check, X, Trophy, RotateCcw, Clock, Share2, Brain, Loader2, ShieldAlert } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { getQuiz, incrementPlayCount } from "@/lib/quizzes";
 import { recordAttempt } from "@/lib/attempts";
+import { saveProgress } from "@/lib/progress";
+import { getStaticOLevelQuiz, locateOLevelQuiz } from "@/lib/olevel";
 import { recordAnswerOutcome, getDueQuestionIds } from "@/lib/reviewQueue";
 import { generateScoreCard, shareScoreCard } from "@/lib/scoreCard";
 import { pickTodaysQuiz, recordDailyCompletion } from "@/lib/dailyQuiz";
@@ -64,10 +67,13 @@ export default function SoloPlayClient({
 
   useEffect(() => {
     if (initialQuiz) return;
-    getQuiz(quizId).then((q) => {
-      setQuiz(q);
-      setStage(q ? "name" : "not-found");
-    });
+    getQuiz(quizId)
+      .catch(() => null)
+      .then((q) => {
+        const resolved = q ?? getStaticOLevelQuiz(quizId); // built-in O Level sets work even before import
+        setQuiz(resolved);
+        setStage(resolved ? "name" : "not-found");
+      });
   }, [quizId, initialQuiz]);
 
   useEffect(() => {
@@ -162,6 +168,7 @@ export default function SoloPlayClient({
       setStage("finished");
       incrementPlayCount(quiz.id).catch(() => {});
       recordAttempt(quiz.id, playerName, score, totalToAsk, violations).catch(() => {});
+      saveProgress(user?.uid ?? null, playerName, quiz.id, quiz.title, score, totalToAsk).catch(() => {});
 
       getApprovedQuizzesOnce().then((quizzes) => {
         const todays = pickTodaysQuiz(quizzes);
@@ -182,7 +189,7 @@ export default function SoloPlayClient({
     }
     setCurrent((c) => c + 1);
     setSelected(null);
-  }, [quiz, current, playerName, score, practiceMode, totalToAsk, violations, withShuffle]);
+  }, [quiz, current, playerName, score, practiceMode, totalToAsk, violations, withShuffle, user]);
 
   useEffect(() => {
     if (stage !== "playing" || !question) return;
@@ -381,6 +388,28 @@ export default function SoloPlayClient({
               Share Score
             </button>
           </div>
+          {(() => {
+            const loc = locateOLevelQuiz(quiz.id);
+            if (!loc) return null;
+            return (
+              <div className="flex flex-wrap gap-3 justify-center mt-3">
+                {loc.nextId && (
+                  <Link
+                    href={`/play/${loc.nextId}`}
+                    className="inline-flex items-center gap-2 px-5 py-2.5 border border-border hover:border-fg transition-colors font-semibold text-sm uppercase tracking-wide"
+                  >
+                    Next: {loc.nextTitle ?? "Full Mock Test"}
+                  </Link>
+                )}
+                <Link
+                  href={`/olevel/${loc.paper.slug}`}
+                  className="inline-flex items-center gap-2 px-5 py-2.5 text-fg-dim hover:text-fg font-mono text-xs uppercase tracking-wide"
+                >
+                  Back to {loc.paper.code}
+                </Link>
+              </div>
+            );
+          })()}
           {cardDataUrl && (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={cardDataUrl} alt="Your score card" className="mt-6 w-full border border-border" />

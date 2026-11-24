@@ -5,11 +5,12 @@ import { useRouter } from "next/navigation";
 import { Plus, Trash2, GripVertical, Save, Sparkles, Loader2 } from "lucide-react";
 import { createQuiz, updateQuiz } from "@/lib/quizzes";
 import { useAuth } from "@/context/AuthContext";
+import { auth } from "@/lib/firebase";
 import type { Quiz, QuizQuestionItem, QuizVisibility, QuizDifficulty, QuestionDifficulty } from "@/lib/types";
 
 const LANGUAGES = ["English", "Hindi", "Hinglish", "Spanish", "French", "Arabic", "Other"];
 const DIFFICULTIES: QuizDifficulty[] = ["Beginner", "Intermediate", "Advanced"];
-const TOPIC_SHORTCUTS = ["Python", "C", "C++", "Java", "JavaScript", "General Knowledge"];
+const TOPIC_SHORTCUTS = ["O Level", "Python", "C", "C++", "Java", "JavaScript", "General Knowledge"];
 const QUESTION_DIFFICULTIES: QuestionDifficulty[] = ["easy", "medium", "hard"];
 
 function newQuestion(): QuizQuestionItem {
@@ -63,9 +64,13 @@ export default function QuizBuilder({ existingQuiz }: { existingQuiz?: Quiz }) {
     setAiError(null);
     setAiLoading(true);
     try {
+      const idToken = await auth?.currentUser?.getIdToken();
       const res = await fetch("/api/generate-quiz", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(idToken ? { Authorization: `Bearer ${idToken}` } : {}),
+        },
         body: JSON.stringify({
           topic: aiTopic,
           count: aiCount,
@@ -77,6 +82,12 @@ export default function QuizBuilder({ existingQuiz }: { existingQuiz?: Quiz }) {
       if (!res.ok) {
         setAiError(data.error || "Quiz generate nahi ho paya.");
         return;
+      }
+
+      if (data.received && data.requested && data.received < data.requested) {
+        setAiError(
+          `⚠️ ${data.requested} maange the, ${data.received} mile (AI providers thode busy the). Jo mile hain wo add kar diye hain — chaho to phir se "Generate" dabao aur bacha hua manually likh lo.`
+        );
       }
 
       const generated: QuizQuestionItem[] = data.questions.map(
