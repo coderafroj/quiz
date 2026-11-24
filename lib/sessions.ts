@@ -10,6 +10,7 @@ import {
   where,
   increment,
   serverTimestamp,
+  writeBatch,
 } from "firebase/firestore";
 import { requireDb } from "./firebase";
 import type { LiveSession, LivePlayer, LiveAnswer, Quiz, QuizQuestionItem } from "./types";
@@ -19,6 +20,11 @@ const PLAYERS = "players";
 const ANSWERS = "answers";
 
 function generateCode(): string {
+  if (typeof crypto !== "undefined" && typeof crypto.getRandomValues === "function") {
+    const array = new Uint32Array(1);
+    crypto.getRandomValues(array);
+    return (100000 + (array[0] % 900000)).toString();
+  }
   return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
@@ -149,15 +155,20 @@ export async function applyElimination(
   const db = requireDb();
   const answeredMap = new Map(answers.map((a) => [a.playerId, a]));
 
-  const updates = players
+  const toEliminate = players
     .filter((p) => !p.eliminated)
     .filter((p) => {
       const a = answeredMap.get(p.id);
       return !a || a.selectedIndex !== correctIndex;
-    })
-    .map((p) => updateDoc(doc(db, SESSIONS, code, PLAYERS, p.id), { eliminated: true }));
+    });
 
-  await Promise.all(updates);
+  if (toEliminate.length === 0) return;
+
+  const batch = writeBatch(db);
+  for (const p of toEliminate) {
+    batch.update(doc(db, SESSIONS, code, PLAYERS, p.id), { eliminated: true });
+  }
+  await batch.commit();
 }
 
 /** Submits a player's answer, scores it (with a speed bonus), and updates their total. */

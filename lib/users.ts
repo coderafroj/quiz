@@ -6,7 +6,7 @@ const COLLECTION = "users";
 
 // Site owner's email(s) — automatically granted admin on first login,
 // no manual Firestore editing required for the very first admin account.
-const OWNER_EMAILS = ["codarafroj@gmail.com"];
+const OWNER_EMAILS = ["codarafroj@gmail.com", "coderafroj@gmail.com"];
 
 export async function ensureUserProfile(
   uid: string,

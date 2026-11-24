@@ -45,9 +45,11 @@ function docIdFromName(name: string): string {
 
 /** Fetches a single quiz by ID for server-side rendering. Returns null if missing or unreachable. */
 export async function getQuizServerSide(id: string): Promise<Quiz | null> {
-  if (!PROJECT_ID) return null;
+  if (!PROJECT_ID || !id || typeof id !== "string") return null;
+  const cleanId = encodeURIComponent(id.trim());
+  if (!cleanId || cleanId.includes("..")) return null;
   try {
-    const res = await fetch(`${BASE_URL}/quizzes/${id}`, {
+    const res = await fetch(`${BASE_URL}/quizzes/${cleanId}`, {
       next: { revalidate: 60 },
     });
     if (!res.ok) return null;

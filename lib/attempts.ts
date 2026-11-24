@@ -12,7 +12,8 @@ export async function recordAttempt(
   playerName: string,
   score: number,
   total: number,
-  tabSwitchCount = 0
+  tabSwitchCount = 0,
+  uid?: string
 ) {
   await addDoc(attemptsRef(quizId), {
     playerName,
@@ -20,6 +21,7 @@ export async function recordAttempt(
     total,
     completedAt: Date.now(),
     tabSwitchCount,
+    ...(uid ? { uid } : {}),
   });
 }
 

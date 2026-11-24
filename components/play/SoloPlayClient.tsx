@@ -167,7 +167,7 @@ export default function SoloPlayClient({
     if (isLast) {
       setStage("finished");
       incrementPlayCount(quiz.id).catch(() => {});
-      recordAttempt(quiz.id, playerName, score, totalToAsk, violations).catch(() => {});
+      recordAttempt(quiz.id, playerName, score, totalToAsk, violations, user?.uid).catch(() => {});
       saveProgress(user?.uid ?? null, playerName, quiz.id, quiz.title, score, totalToAsk).catch(() => {});
 
       getApprovedQuizzesOnce().then((quizzes) => {
