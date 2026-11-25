@@ -1,6 +1,16 @@
 {
   "name": "quizplay",
   "version": "0.1.0",
+  "description": "Free NIELIT O Level practice and live quiz platform built with Next.js and Firebase",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/coderafroj/quiz.git"
+  },
+  "homepage": "https://play.coderafroj.me",
+  "bugs": {
+    "url": "https://github.com/coderafroj/quiz/issues"
+  },
   "private": true,
   "scripts": {
     "dev": "next dev",

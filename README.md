@@ -1,146 +1,169 @@
-# Codarafroj Play — play.coderafroj.me
+<div align="center">
 
-A full quiz platform: anyone can sign up, build a quiz in any language, and
-share it two ways — a **solo link** anyone opens and plays at their own pace,
-or a **live game** where players join with a 6-digit code and everyone plays
-together in real time, like a classroom quiz night.
+# Codarafroj Play
 
-This runs on its **own Firebase project** (`codrafroj-quiz`) — separate from
-the coderafroj.me portfolio's project.
+**Free NIELIT O Level practice, coding quizzes, and live quiz games with a join code.**
+
+[**Live site: play.coderafroj.me**](https://play.coderafroj.me)
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=next.js)](https://nextjs.org)
+[![Firebase](https://img.shields.io/badge/Firebase-Auth%20%2B%20Firestore-orange?logo=firebase)](https://firebase.google.com)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
+
+<img src="docs/screenshots/home.png" alt="Codarafroj Play home page" width="800">
+
+</div>
 
 ---
 
-## 1. How it works
+## Why this exists
 
-- **Anyone** can create a free account and build quizzes — they own every
-  quiz they make, and can edit or delete it anytime from `/dashboard`.
-- **Solo mode**: `/play/[quizId]` — no login needed to play. Enter your name,
-  answer at your own pace, see your score. Results are logged so the quiz
-  owner can see a leaderboard.
-- **Live mode**: quiz owner clicks "Host Live" → gets a 6-digit code →
-  players go to `/join`, enter the code + a nickname (no account needed) →
-  host controls the pace (Start → Reveal → Next Question) and everyone sees
-  results sync in real time, ending in a podium.
-- **Admin panel** (`/admin`) — only visible to admin accounts. Lists every
-  user and every quiz on the platform, with the power to delete any quiz.
+Good O Level practice material is scattered across PDFs and ad-filled sites. Codarafroj Play puts it in one free place: unit-wise MCQs for all four papers, full mock tests, and progress tracking. Anyone can also build their own quiz and host it live, like a classroom quiz night.
 
-## 2. Firebase project setup (codrafroj-quiz)
+## Features
 
-This project's Firebase config is already in `.env.local` — but a few things
-need to be turned on in the Firebase Console for `codrafroj-quiz`:
+**For O Level students**
+- 4 papers, 24 unit quizzes, 4 full mock tests, **371 MCQs**
+  - M1-R5.1 IT Tools & Network Basics
+  - M2-R5.1 Web Designing & Publishing
+  - M3-R5.1 Python Programming
+  - M4-R5.1 Internet of Things
+- Progress tracking with best scores, attempts and a readiness meter, synced across devices
+- Options reshuffle and every question is timed, so you learn the answer, not its position
 
-1. **Build → Authentication → Get started → Sign-in method → Email/Password
-   → Enable.** This is what lets people sign up and log in.
-2. **Build → Firestore Database → Create database** → production mode → a
-   region close to your users (e.g. asia-south1 for India).
-3. **First admin account**: `lib/users.ts` already has your email
-   (`coderafroj@gmail.com`) in the `OWNER_EMAILS` list — the first time you
-   sign up on the live site with that exact email, you're automatically made
-   an admin. No manual Firestore editing needed. Edit that file if you want
-   to use a different email.
+**For everyone**
+- Coding quizzes in Python, C, C++ and Java, plus General Knowledge
+- **Live games**: host a real-time quiz, players join with a 6-digit code (no account needed), ending in a podium
+- **Solo links**: share a quiz anyone can play at their own pace
+- **Create quizzes** in any language, optionally generated with AI
+- Daily quiz, remix a quiz, score cards, and a mobile-first PWA layout
+- Fair-play checks: copy and tab-switch detection
 
-## 3. Deploy the Firestore rules
+**For admins**
+- Learner insights, an idempotent O Level importer, and a duplicate cleaner
 
-`firebase.json` and `.firebaserc` are already set up and pre-linked to the
-`codrafroj-quiz` project, so this is a two-command job:
+## Screenshots
+
+| O Level papers | Live game |
+| :---: | :---: |
+| <img src="docs/screenshots/olevel.png" alt="O Level papers" width="400"> | <img src="docs/screenshots/live-game.png" alt="Live quiz game" width="400"> |
+| **Quiz builder** | **Progress tracking** |
+| <img src="docs/screenshots/builder.png" alt="Quiz builder" width="400"> | <img src="docs/screenshots/progress.png" alt="Progress and readiness meter" width="400"> |
+
+## Tech stack
+
+- **Framework:** [Next.js](https://nextjs.org) (App Router), React, TypeScript
+- **Styling and motion:** Tailwind CSS 4, Framer Motion, Lucide icons
+- **Backend:** Firebase Authentication and Cloud Firestore (security rules in `firestore.rules`)
+- **AI quiz generation:** Groq, Gemini and OpenRouter with automatic fallback (all optional)
+- **Hosting:** Vercel or Firebase Hosting
+
+## Getting started
+
+### Prerequisites
+
+- Node.js 20 or newer
+- A free [Firebase](https://console.firebase.google.com) project
+
+### 1. Clone and install
+
+```bash
+git clone https://github.com/coderafroj/quiz.git
+cd quiz
+npm install
+```
+
+### 2. Set up Firebase
+
+1. Create a Firebase project and add a **Web app**.
+2. **Authentication** → Sign-in method → enable **Email/Password** (and **Google** if you want Google sign-in).
+3. **Firestore Database** → Create database → production mode → choose a region near your users.
+4. Copy your own project ID into `.firebaserc`.
+5. Deploy the security rules:
 
 ```bash
 npx firebase-tools login
 npx firebase-tools deploy --only firestore:rules
 ```
 
-(No need to `npm install -g firebase-tools` — `npx` runs it without a global
-install, which avoids the permission errors global installs often hit on
-Linux.)
-
-If `deploy` fails with a 403 "Caller does not have required permission"
-error, it means the Google account you're logged into the CLI with doesn't
-have access to `codrafroj-quiz`. Run `npx firebase-tools projects:list` to
-see which projects your logged-in account can see, and `npx firebase-tools
-login --no-localhost` if you need to switch accounts on a machine where a
-browser can't open automatically.
-
-## 4. Local development
+### 3. Configure environment variables
 
 ```bash
-npm install
+cp .env.example .env.local
+```
+
+Fill in the `NEXT_PUBLIC_FIREBASE_*` values from your Firebase web app. The AI keys are optional: set at least one of `GROQ_API_KEY`, `GEMINI_API_KEY` or `OPENROUTER_API_KEY` to enable AI quiz generation.
+
+### 4. Make yourself admin
+
+Change the email list in **both** `lib/users.ts` (`OWNER_EMAILS`) and `firestore.rules` (`isVerifiedOwner`) to your own email, then redeploy the rules. The first time you sign up with that verified email you become an admin.
+
+### 5. Run
+
+```bash
 npm run dev
 ```
 
-Visit `http://localhost:3000`.
+Open <http://localhost:3000>, then visit `/admin/import` once to import the O Level quizzes (safe to run again, it never duplicates).
 
-## 5. Deployment — play.coderafroj.me
+## Scripts
 
-```bash
-npx firebase-tools login
-npx firebase-tools init hosting   # choose "Use an existing project" -> codrafroj-quiz
-npx firebase-tools deploy
-```
+| Command | What it does |
+| --- | --- |
+| `npm run dev` | Start the dev server |
+| `npm run build` | Production build |
+| `npm run start` | Run the production build |
+| `npm run lint` | Lint the code |
 
-Then in Firebase Console → **Hosting → Add custom domain** → enter
-`play.coderafroj.me` and follow the DNS steps at your domain registrar (same
-process as the main site — a CNAME/A record added there).
-
-Alternatively, deploy to **Vercel** and add `play.coderafroj.me` as the
-domain there instead.
-
-## 6. Known v1 trade-offs (worth knowing)
-
-- **Live mode players don't need an account.** This was intentional — anyone
-  with a code can join instantly. The trade-off is that within a single game
-  code, player score-writes aren't locked to a verified identity. Fine for a
-  casual/classroom quiz tool; if you ever need tamper-proof scoring, that
-  needs a Cloud Function to validate answers server-side.
-- **Language field is per-quiz, not a full site translation.** The creator
-  picks a language when building a quiz (shown to players), but the
-  interface itself (buttons, labels) is in English.
-- **No question images/media yet** — text-only questions and options for v1.
-
-## 7. File map
+## Project structure
 
 ```
 app/
-  page.tsx                        → marketing landing page
-  login/, signup/                 → auth pages (anyone can sign up)
-  dashboard/page.tsx              → "My Quizzes" list
-  dashboard/new/page.tsx          → create a quiz
-  dashboard/[quizId]/edit/        → edit a quiz
-  dashboard/[quizId]/results/     → solo-mode leaderboard for a quiz
-  play/[quizId]/page.tsx          → public solo play experience
-  join/page.tsx                   → enter a live game code
-  host/[code]/page.tsx            → host control panel (lobby/question/reveal/ended)
-  live/[code]/page.tsx            → player's live game view
-  admin/page.tsx                  → platform-wide admin overview
-components/
-  Navbar.tsx, Footer.tsx
-  dashboard/QuizBuilder.tsx        → the question editor
-  dashboard/QuizCard.tsx           → quiz row in "My Quizzes"
+  page.tsx                 Landing page
+  olevel/                  O Level papers and unit pages
+  explore/                 Browse public quizzes
+  play/[quizId]/           Solo play
+  join/, live/[code]/      Join and play a live game
+  host/[code]/             Host control panel
+  dashboard/               Create, edit and view results for your quizzes
+  admin/                   Admin overview, importer, duplicate cleaner
+  api/generate-quiz/       AI quiz generation (sign-in required, rate limited)
+components/                UI components
+context/                   Auth context
 lib/
-  firebase.ts                      → client init
-  types.ts                         → Quiz, LiveSession, UserProfile, etc.
-  quizzes.ts                       → quiz CRUD
-  sessions.ts                      → live-game engine (join/answer/scoring)
-  attempts.ts                      → solo-mode leaderboard logging
-  users.ts                         → user profile + admin role handling
-firestore.rules                    → security rules for this project
-firebase.json / .firebaserc        → pre-linked to codrafroj-quiz
+  olevel/                  O Level question bank (m1 to m4)
+  sessions.ts              Live game engine
+  progress.ts              Per-learner progress
+  quizzes.ts, attempts.ts  Quiz CRUD and solo leaderboard
+  useAntiCheat.ts          Fair-play detection
+firestore.rules            Security rules
 ```
 
-Any step you get stuck on, just ask.
-# quiz
+## Contributing
 
----
+Contributions are welcome, and **adding or fixing O Level questions is the easiest way to start**. Read [CONTRIBUTING.md](CONTRIBUTING.md), then pick an issue labeled `good first issue`.
 
-## What's new (O Level edition)
+## Known trade-offs
 
-- **NIELIT O Level section** (`/olevel`, `/olevel/m1..m4`): 4 papers, 24 unit quizzes, 4 full mock tests, 371 original MCQs. Built-in, works even before importing.
-- **Progress tracking**: best score / attempts per quiz, readiness meter, synced to `users/{uid}/progress`.
-- **Admin**: learner insights (funnel per unit, recent activity), idempotent importer, duplicate cleaner (`/admin/duplicates`).
-- **Security**: hardened `firestore.rules` (no self-promotion to admin, no self-approval, validated writes), AI route needs sign-in + rate limit, security headers.
-- **SEO / perf**: per-page metadata, JSON-LD (Course, FAQ, Breadcrumb), sitemap incl. O Level, PWA manifest, mobile bottom tab bar.
+- Live-game players do not need an account, so scores inside a game are range-checked by the rules but not tied to a verified identity. Fine for casual and classroom use.
+- The interface is in English. Only the quiz content can be in any language.
+- Questions are text-only for now (no images).
 
-### Deploy checklist
-1. `firebase deploy --only firestore:rules` (required for progress tracking and insights).
-2. Set `GROQ_API_KEY` (optionally `GEMINI_API_KEY`, `OPENROUTER_API_KEY`) in Vercel for AI quiz generation.
-3. Open `/admin/import` once to import O Level + starter quizzes (safe to press again, never duplicates).
-4. Open `/admin/duplicates` and delete the old duplicate quizzes made by earlier imports.
+See [SECURITY.md](SECURITY.md) for details and how to report vulnerabilities.
+
+## Roadmap
+
+- [ ] More O Level questions with explanations
+- [ ] Hindi interface and Hindi question sets
+- [ ] Images in questions
+- [ ] Server-side scoring for live games
+- [ ] Public API for quiz data
+
+## License
+
+Released under the [MIT License](LICENSE). Quiz content in `lib/olevel` is original work written for this project.
+
+## Author
+
+Built by [Codarafroj](https://coderafroj.me). If this helps you, a ⭐ on the repo means a lot.

@@ -1,0 +1,704 @@
+From dce334c3f598e2c04e9d3ea360746f7e68543272 Mon Sep 17 00:00:00 2001
+From: coderafroj <noreply@example.com>
+Date: Wed, 25 Nov 2026 10:28:55 +0000
+Subject: [PATCH] Prepare for open source: README, LICENSE, CONTRIBUTING,
+ SECURITY, templates, .env.example
+
+---
+ .env.example                              |  17 ++
+ .github/ISSUE_TEMPLATE/bug_report.md      |  17 ++
+ .github/ISSUE_TEMPLATE/config.yml         |   5 +
+ .github/ISSUE_TEMPLATE/feature_request.md |  11 +
+ .github/ISSUE_TEMPLATE/question_error.md  |  13 ++
+ .github/PULL_REQUEST_TEMPLATE.md          |  17 ++
+ .gitignore                                |   1 +
+ CODE_OF_CONDUCT.md                        |  23 +++
+ CONTRIBUTING.md                           |  73 +++++++
+ LICENSE                                   |  21 ++
+ README.md                                 | 235 ++++++++++++----------
+ SECURITY.md                               |  28 +++
+ docs/screenshots/.gitkeep                 |   0
+ lib/firebase.ts                           |   7 +-
+ package.json                              |  10 +
+ public/file.svg                           |   1 -
+ public/globe.svg                          |   1 -
+ public/next.svg                           |   1 -
+ public/vercel.svg                         |   1 -
+ public/window.svg                         |   1 -
+ 20 files changed, 368 insertions(+), 115 deletions(-)
+ create mode 100644 .env.example
+ create mode 100644 .github/ISSUE_TEMPLATE/bug_report.md
+ create mode 100644 .github/ISSUE_TEMPLATE/config.yml
+ create mode 100644 .github/ISSUE_TEMPLATE/feature_request.md
+ create mode 100644 .github/ISSUE_TEMPLATE/question_error.md
+ create mode 100644 .github/PULL_REQUEST_TEMPLATE.md
+ create mode 100644 CODE_OF_CONDUCT.md
+ create mode 100644 CONTRIBUTING.md
+ create mode 100644 LICENSE
+ create mode 100644 SECURITY.md
+ create mode 100644 docs/screenshots/.gitkeep
+ delete mode 100644 public/file.svg
+ delete mode 100644 public/globe.svg
+ delete mode 100644 public/next.svg
+ delete mode 100644 public/vercel.svg
+ delete mode 100644 public/window.svg
+
+diff --git a/.env.example b/.env.example
+new file mode 100644
+index 0000000..6931f6e
+--- /dev/null
++++ b/.env.example
+@@ -0,0 +1,17 @@
++# Copy this file to .env.local and fill in your own values.
++# Never commit .env.local (it is git-ignored).
++
++# --- Firebase (Project settings -> General -> Your apps -> Web app) ---
++NEXT_PUBLIC_FIREBASE_API_KEY=
++NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=
++NEXT_PUBLIC_FIREBASE_PROJECT_ID=
++NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=
++NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=
++NEXT_PUBLIC_FIREBASE_APP_ID=
++
++# --- AI quiz generation (optional) ---
++# Set at least one. With 2+ set, generation falls back to the next provider
++# when one hits its free-tier limit. Server-side only.
++GROQ_API_KEY=
++GEMINI_API_KEY=
++OPENROUTER_API_KEY=
+diff --git a/.github/ISSUE_TEMPLATE/bug_report.md b/.github/ISSUE_TEMPLATE/bug_report.md
+new file mode 100644
+index 0000000..142fd69
+--- /dev/null
++++ b/.github/ISSUE_TEMPLATE/bug_report.md
+@@ -0,0 +1,17 @@
++---
++name: Bug report
++about: Something is broken
++labels: bug
++---
++
++**What happened?**
++
++**Steps to reproduce**
++1.
++2.
++
++**Expected behavior**
++
++**Screenshots**
++
++**Device / browser**
+diff --git a/.github/ISSUE_TEMPLATE/config.yml b/.github/ISSUE_TEMPLATE/config.yml
+new file mode 100644
+index 0000000..a2c38fd
+--- /dev/null
++++ b/.github/ISSUE_TEMPLATE/config.yml
+@@ -0,0 +1,5 @@
++blank_issues_enabled: true
++contact_links:
++  - name: Security vulnerability
++    url: https://github.com/coderafroj/quiz/security/advisories/new
++    about: Please report security issues privately.
+diff --git a/.github/ISSUE_TEMPLATE/feature_request.md b/.github/ISSUE_TEMPLATE/feature_request.md
+new file mode 100644
+index 0000000..ec95e9a
+--- /dev/null
++++ b/.github/ISSUE_TEMPLATE/feature_request.md
+@@ -0,0 +1,11 @@
++---
++name: Feature request
++about: Suggest an idea
++labels: enhancement
++---
++
++**What problem does this solve?**
++
++**Proposed solution**
++
++**Alternatives considered**
+diff --git a/.github/ISSUE_TEMPLATE/question_error.md b/.github/ISSUE_TEMPLATE/question_error.md
+new file mode 100644
+index 0000000..86ea277
+--- /dev/null
++++ b/.github/ISSUE_TEMPLATE/question_error.md
+@@ -0,0 +1,13 @@
++---
++name: Wrong question or answer
++about: Report an incorrect O Level question, answer or typo
++labels: questions
++---
++
++**Paper / unit** (for example M3 Python, Unit 2)
++
++**The question text**
++
++**What is wrong?** (wrong answer, ambiguous, typo, out of syllabus)
++
++**Correct answer and a source or explanation**
+diff --git a/.github/PULL_REQUEST_TEMPLATE.md b/.github/PULL_REQUEST_TEMPLATE.md
+new file mode 100644
+index 0000000..d066b42
+--- /dev/null
++++ b/.github/PULL_REQUEST_TEMPLATE.md
+@@ -0,0 +1,17 @@
++## What does this PR do?
++
++<!-- A short description. Link the issue: Closes #123 -->
++
++## Type of change
++
++- [ ] New or fixed questions
++- [ ] Bug fix
++- [ ] New feature
++- [ ] Docs
++
++## Checklist
++
++- [ ] `npm run lint` and `npx tsc --noEmit` pass
++- [ ] No secrets or `.env` files included
++- [ ] Questions are my own work (not copied) and answers are verified
++- [ ] Screenshots attached if the UI changed
+diff --git a/.gitignore b/.gitignore
+index 5ef6a52..7b8da95 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -32,6 +32,7 @@ yarn-error.log*
+ 
+ # env files (can opt-in for committing if needed)
+ .env*
++!.env.example
+ 
+ # vercel
+ .vercel
+diff --git a/CODE_OF_CONDUCT.md b/CODE_OF_CONDUCT.md
+new file mode 100644
+index 0000000..49c2a29
+--- /dev/null
++++ b/CODE_OF_CONDUCT.md
+@@ -0,0 +1,23 @@
++# Code of Conduct
++
++We want this project to be welcoming to everyone, especially students and first-time contributors.
++
++## Expected behavior
++
++- Be respectful and patient. Many contributors are learning.
++- Give feedback on the work, not the person.
++- Assume good intent and ask questions before judging.
++- Accept that maintainers may decline contributions that do not fit the project.
++
++## Unacceptable behavior
++
++- Harassment, insults, discrimination or personal attacks
++- Spam, self-promotion unrelated to the project, or trolling
++- Publishing other people's private information
++- Submitting copied or plagiarized content as your own
++
++## Enforcement
++
++Maintainers may edit or remove comments, issues and pull requests, and may block people who break these rules. Report problems by contacting the maintainer at the email listed on [github.com/coderafroj](https://github.com/coderafroj) or through a private message on GitHub.
++
++This code is adapted in spirit from the [Contributor Covenant](https://www.contributor-covenant.org/).
+diff --git a/CONTRIBUTING.md b/CONTRIBUTING.md
+new file mode 100644
+index 0000000..bf7cf4c
+--- /dev/null
++++ b/CONTRIBUTING.md
+@@ -0,0 +1,73 @@
++# Contributing to Codarafroj Play
++
++Thanks for helping! The easiest and most valuable contribution is **adding or fixing quiz questions**. Code contributions are welcome too.
++
++## Ways to contribute
++
++| You want to... | Start here |
++| --- | --- |
++| Add or fix O Level questions | [Adding questions](#adding-o-level-questions) |
++| Fix a bug | Issues labeled `bug` |
++| Build a feature | Open an issue first so we can agree on the approach |
++| Improve docs | Edit any `.md` file and open a PR |
++
++Look for issues labeled **`good first issue`** if you are new.
++
++## Local setup
++
++```bash
++git clone https://github.com/coderafroj/quiz.git
++cd quiz
++npm install
++cp .env.example .env.local   # then fill in your own Firebase values
++npm run dev
++```
++
++You need your own free Firebase project (Authentication + Firestore). See the README for the steps. **Never use or commit someone else's keys.**
++
++Before opening a PR, run:
++
++```bash
++npm run lint
++npx tsc --noEmit
++```
++
++## Adding O Level questions
++
++Questions live in `lib/olevel/m1.ts` to `m4.ts` (one file per paper), grouped by unit. Each question is a compact tuple:
++
++```ts
++[question, "optionA|optionB|optionC|optionD", correctIndex, level]
++```
++
++- `correctIndex` is 0-based (0 = first option).
++- `level` is `"e"` (easy), `"m"` (medium) or `"h"` (hard).
++- Exactly 4 options, separated by `|`. Do not use `|` inside an option.
++
++Example:
++
++```ts
++["Which keyword defines a function in Python?", "func|def|function|lambda", 1, "e"],
++```
++
++Rules for questions:
++
++1. Write them **yourself**. Do not copy from books, paid test series or other websites (copyright).
++2. Only one option may be correct, and you must be sure it is correct.
++3. Stay within the NIELIT O Level syllabus for that unit.
++4. No duplicates. Search the file for similar wording first.
++
++## Pull request checklist
++
++- [ ] One focused change per PR
++- [ ] `npm run lint` and `npx tsc --noEmit` pass
++- [ ] No secrets, `.env` files or personal data included
++- [ ] Screenshots attached if the UI changed
++
++## Security issues
++
++Do not open a public issue. See [SECURITY.md](SECURITY.md).
++
++## Code of Conduct
++
++By participating you agree to follow our [Code of Conduct](CODE_OF_CONDUCT.md).
+diff --git a/LICENSE b/LICENSE
+new file mode 100644
+index 0000000..d28f3b3
+--- /dev/null
++++ b/LICENSE
+@@ -0,0 +1,21 @@
++MIT License
++
++Copyright (c) 2026 Codarafroj
++
++Permission is hereby granted, free of charge, to any person obtaining a copy
++of this software and associated documentation files (the "Software"), to deal
++in the Software without restriction, including without limitation the rights
++to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
++copies of the Software, and to permit persons to whom the Software is
++furnished to do so, subject to the following conditions:
++
++The above copyright notice and this permission notice shall be included in all
++copies or substantial portions of the Software.
++
++THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
++IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
++FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
++AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
++LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
++OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
++SOFTWARE.
+diff --git a/README.md b/README.md
+index ad71f36..5100272 100644
+--- a/README.md
++++ b/README.md
+@@ -1,146 +1,169 @@
+-# Codarafroj Play — play.coderafroj.me
++<div align="center">
+ 
+-A full quiz platform: anyone can sign up, build a quiz in any language, and
+-share it two ways — a **solo link** anyone opens and plays at their own pace,
+-or a **live game** where players join with a 6-digit code and everyone plays
+-together in real time, like a classroom quiz night.
++# Codarafroj Play
+ 
+-This runs on its **own Firebase project** (`codrafroj-quiz`) — separate from
+-the coderafroj.me portfolio's project.
++**Free NIELIT O Level practice, coding quizzes, and live quiz games with a join code.**
++
++[**Live site: play.coderafroj.me**](https://play.coderafroj.me)
++
++[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
++[![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=next.js)](https://nextjs.org)
++[![Firebase](https://img.shields.io/badge/Firebase-Auth%20%2B%20Firestore-orange?logo=firebase)](https://firebase.google.com)
++[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
++
++<img src="docs/screenshots/home.png" alt="Codarafroj Play home page" width="800">
++
++</div>
+ 
+ ---
+ 
+-## 1. How it works
++## Why this exists
+ 
+-- **Anyone** can create a free account and build quizzes — they own every
+-  quiz they make, and can edit or delete it anytime from `/dashboard`.
+-- **Solo mode**: `/play/[quizId]` — no login needed to play. Enter your name,
+-  answer at your own pace, see your score. Results are logged so the quiz
+-  owner can see a leaderboard.
+-- **Live mode**: quiz owner clicks "Host Live" → gets a 6-digit code →
+-  players go to `/join`, enter the code + a nickname (no account needed) →
+-  host controls the pace (Start → Reveal → Next Question) and everyone sees
+-  results sync in real time, ending in a podium.
+-- **Admin panel** (`/admin`) — only visible to admin accounts. Lists every
+-  user and every quiz on the platform, with the power to delete any quiz.
++Good O Level practice material is scattered across PDFs and ad-filled sites. Codarafroj Play puts it in one free place: unit-wise MCQs for all four papers, full mock tests, and progress tracking. Anyone can also build their own quiz and host it live, like a classroom quiz night.
+ 
+-## 2. Firebase project setup (codrafroj-quiz)
++## Features
+ 
+-This project's Firebase config is already in `.env.local` — but a few things
+-need to be turned on in the Firebase Console for `codrafroj-quiz`:
++**For O Level students**
++- 4 papers, 24 unit quizzes, 4 full mock tests, **371 MCQs**
++  - M1-R5.1 IT Tools & Network Basics
++  - M2-R5.1 Web Designing & Publishing
++  - M3-R5.1 Python Programming
++  - M4-R5.1 Internet of Things
++- Progress tracking with best scores, attempts and a readiness meter, synced across devices
++- Options reshuffle and every question is timed, so you learn the answer, not its position
+ 
+-1. **Build → Authentication → Get started → Sign-in method → Email/Password
+-   → Enable.** This is what lets people sign up and log in.
+-2. **Build → Firestore Database → Create database** → production mode → a
+-   region close to your users (e.g. asia-south1 for India).
+-3. **First admin account**: `lib/users.ts` already has your email
+-   (`coderafroj@gmail.com`) in the `OWNER_EMAILS` list — the first time you
+-   sign up on the live site with that exact email, you're automatically made
+-   an admin. No manual Firestore editing needed. Edit that file if you want
+-   to use a different email.
++**For everyone**
++- Coding quizzes in Python, C, C++ and Java, plus General Knowledge
++- **Live games**: host a real-time quiz, players join with a 6-digit code (no account needed), ending in a podium
++- **Solo links**: share a quiz anyone can play at their own pace
++- **Create quizzes** in any language, optionally generated with AI
++- Daily quiz, remix a quiz, score cards, and a mobile-first PWA layout
++- Fair-play checks: copy and tab-switch detection
+ 
+-## 3. Deploy the Firestore rules
++**For admins**
++- Learner insights, an idempotent O Level importer, and a duplicate cleaner
+ 
+-`firebase.json` and `.firebaserc` are already set up and pre-linked to the
+-`codrafroj-quiz` project, so this is a two-command job:
++## Screenshots
+ 
+-```bash
+-npx firebase-tools login
+-npx firebase-tools deploy --only firestore:rules
+-```
++| O Level papers | Live game |
++| :---: | :---: |
++| <img src="docs/screenshots/olevel.png" alt="O Level papers" width="400"> | <img src="docs/screenshots/live-game.png" alt="Live quiz game" width="400"> |
++| **Quiz builder** | **Progress tracking** |
++| <img src="docs/screenshots/builder.png" alt="Quiz builder" width="400"> | <img src="docs/screenshots/progress.png" alt="Progress and readiness meter" width="400"> |
+ 
+-(No need to `npm install -g firebase-tools` — `npx` runs it without a global
+-install, which avoids the permission errors global installs often hit on
+-Linux.)
++## Tech stack
+ 
+-If `deploy` fails with a 403 "Caller does not have required permission"
+-error, it means the Google account you're logged into the CLI with doesn't
+-have access to `codrafroj-quiz`. Run `npx firebase-tools projects:list` to
+-see which projects your logged-in account can see, and `npx firebase-tools
+-login --no-localhost` if you need to switch accounts on a machine where a
+-browser can't open automatically.
++- **Framework:** [Next.js](https://nextjs.org) (App Router), React, TypeScript
++- **Styling and motion:** Tailwind CSS 4, Framer Motion, Lucide icons
++- **Backend:** Firebase Authentication and Cloud Firestore (security rules in `firestore.rules`)
++- **AI quiz generation:** Groq, Gemini and OpenRouter with automatic fallback (all optional)
++- **Hosting:** Vercel or Firebase Hosting
+ 
+-## 4. Local development
++## Getting started
++
++### Prerequisites
++
++- Node.js 20 or newer
++- A free [Firebase](https://console.firebase.google.com) project
++
++### 1. Clone and install
+ 
+ ```bash
++git clone https://github.com/coderafroj/quiz.git
++cd quiz
+ npm install
+-npm run dev
+ ```
+ 
+-Visit `http://localhost:3000`.
++### 2. Set up Firebase
+ 
+-## 5. Deployment — play.coderafroj.me
++1. Create a Firebase project and add a **Web app**.
++2. **Authentication** → Sign-in method → enable **Email/Password** (and **Google** if you want Google sign-in).
++3. **Firestore Database** → Create database → production mode → choose a region near your users.
++4. Copy your own project ID into `.firebaserc`.
++5. Deploy the security rules:
+ 
+ ```bash
+ npx firebase-tools login
+-npx firebase-tools init hosting   # choose "Use an existing project" -> codrafroj-quiz
+-npx firebase-tools deploy
++npx firebase-tools deploy --only firestore:rules
+ ```
+ 
+-Then in Firebase Console → **Hosting → Add custom domain** → enter
+-`play.coderafroj.me` and follow the DNS steps at your domain registrar (same
+-process as the main site — a CNAME/A record added there).
++### 3. Configure environment variables
++
++```bash
++cp .env.example .env.local
++```
+ 
+-Alternatively, deploy to **Vercel** and add `play.coderafroj.me` as the
+-domain there instead.
++Fill in the `NEXT_PUBLIC_FIREBASE_*` values from your Firebase web app. The AI keys are optional: set at least one of `GROQ_API_KEY`, `GEMINI_API_KEY` or `OPENROUTER_API_KEY` to enable AI quiz generation.
+ 
+-## 6. Known v1 trade-offs (worth knowing)
++### 4. Make yourself admin
+ 
+-- **Live mode players don't need an account.** This was intentional — anyone
+-  with a code can join instantly. The trade-off is that within a single game
+-  code, player score-writes aren't locked to a verified identity. Fine for a
+-  casual/classroom quiz tool; if you ever need tamper-proof scoring, that
+-  needs a Cloud Function to validate answers server-side.
+-- **Language field is per-quiz, not a full site translation.** The creator
+-  picks a language when building a quiz (shown to players), but the
+-  interface itself (buttons, labels) is in English.
+-- **No question images/media yet** — text-only questions and options for v1.
++Change the email list in **both** `lib/users.ts` (`OWNER_EMAILS`) and `firestore.rules` (`isVerifiedOwner`) to your own email, then redeploy the rules. The first time you sign up with that verified email you become an admin.
+ 
+-## 7. File map
++### 5. Run
++
++```bash
++npm run dev
++```
++
++Open <http://localhost:3000>, then visit `/admin/import` once to import the O Level quizzes (safe to run again, it never duplicates).
++
++## Scripts
++
++| Command | What it does |
++| --- | --- |
++| `npm run dev` | Start the dev server |
++| `npm run build` | Production build |
++| `npm run start` | Run the production build |
++| `npm run lint` | Lint the code |
++
++## Project structure
+ 
+ ```
+ app/
+-  page.tsx                        → marketing landing page
+-  login/, signup/                 → auth pages (anyone can sign up)
+-  dashboard/page.tsx              → "My Quizzes" list
+-  dashboard/new/page.tsx          → create a quiz
+-  dashboard/[quizId]/edit/        → edit a quiz
+-  dashboard/[quizId]/results/     → solo-mode leaderboard for a quiz
+-  play/[quizId]/page.tsx          → public solo play experience
+-  join/page.tsx                   → enter a live game code
+-  host/[code]/page.tsx            → host control panel (lobby/question/reveal/ended)
+-  live/[code]/page.tsx            → player's live game view
+-  admin/page.tsx                  → platform-wide admin overview
+-components/
+-  Navbar.tsx, Footer.tsx
+-  dashboard/QuizBuilder.tsx        → the question editor
+-  dashboard/QuizCard.tsx           → quiz row in "My Quizzes"
++  page.tsx                 Landing page
++  olevel/                  O Level papers and unit pages
++  explore/                 Browse public quizzes
++  play/[quizId]/           Solo play
++  join/, live/[code]/      Join and play a live game
++  host/[code]/             Host control panel
++  dashboard/               Create, edit and view results for your quizzes
++  admin/                   Admin overview, importer, duplicate cleaner
++  api/generate-quiz/       AI quiz generation (sign-in required, rate limited)
++components/                UI components
++context/                   Auth context
+ lib/
+-  firebase.ts                      → client init
+-  types.ts                         → Quiz, LiveSession, UserProfile, etc.
+-  quizzes.ts                       → quiz CRUD
+-  sessions.ts                      → live-game engine (join/answer/scoring)
+-  attempts.ts                      → solo-mode leaderboard logging
+-  users.ts                         → user profile + admin role handling
+-firestore.rules                    → security rules for this project
+-firebase.json / .firebaserc        → pre-linked to codrafroj-quiz
++  olevel/                  O Level question bank (m1 to m4)
++  sessions.ts              Live game engine
++  progress.ts              Per-learner progress
++  quizzes.ts, attempts.ts  Quiz CRUD and solo leaderboard
++  useAntiCheat.ts          Fair-play detection
++firestore.rules            Security rules
+ ```
+ 
+-Any step you get stuck on, just ask.
+-# quiz
++## Contributing
+ 
+----
++Contributions are welcome, and **adding or fixing O Level questions is the easiest way to start**. Read [CONTRIBUTING.md](CONTRIBUTING.md), then pick an issue labeled `good first issue`.
++
++## Known trade-offs
++
++- Live-game players do not need an account, so scores inside a game are range-checked by the rules but not tied to a verified identity. Fine for casual and classroom use.
++- The interface is in English. Only the quiz content can be in any language.
++- Questions are text-only for now (no images).
++
++See [SECURITY.md](SECURITY.md) for details and how to report vulnerabilities.
++
++## Roadmap
++
++- [ ] More O Level questions with explanations
++- [ ] Hindi interface and Hindi question sets
++- [ ] Images in questions
++- [ ] Server-side scoring for live games
++- [ ] Public API for quiz data
++
++## License
+ 
+-## What's new (O Level edition)
++Released under the [MIT License](LICENSE). Quiz content in `lib/olevel` is original work written for this project.
+ 
+-- **NIELIT O Level section** (`/olevel`, `/olevel/m1..m4`): 4 papers, 24 unit quizzes, 4 full mock tests, 371 original MCQs. Built-in, works even before importing.
+-- **Progress tracking**: best score / attempts per quiz, readiness meter, synced to `users/{uid}/progress`.
+-- **Admin**: learner insights (funnel per unit, recent activity), idempotent importer, duplicate cleaner (`/admin/duplicates`).
+-- **Security**: hardened `firestore.rules` (no self-promotion to admin, no self-approval, validated writes), AI route needs sign-in + rate limit, security headers.
+-- **SEO / perf**: per-page metadata, JSON-LD (Course, FAQ, Breadcrumb), sitemap incl. O Level, PWA manifest, mobile bottom tab bar.
++## Author
+ 
+-### Deploy checklist
+-1. `firebase deploy --only firestore:rules` (required for progress tracking and insights).
+-2. Set `GROQ_API_KEY` (optionally `GEMINI_API_KEY`, `OPENROUTER_API_KEY`) in Vercel for AI quiz generation.
+-3. Open `/admin/import` once to import O Level + starter quizzes (safe to press again, never duplicates).
+-4. Open `/admin/duplicates` and delete the old duplicate quizzes made by earlier imports.
++Built by [Codarafroj](https://coderafroj.me). If this helps you, a ⭐ on the repo means a lot.
+diff --git a/SECURITY.md b/SECURITY.md
+new file mode 100644
+index 0000000..3e6be9e
+--- /dev/null
++++ b/SECURITY.md
+@@ -0,0 +1,28 @@
++# Security Policy
++
++## Reporting a vulnerability
++
++Please **do not** open a public issue for security problems. Report them privately using GitHub's
++[private vulnerability reporting](https://github.com/coderafroj/quiz/security/advisories/new) for this repository.
++
++Include what you found, how to reproduce it, and the possible impact. You will get a reply as soon as possible.
++
++## Scope
++
++In scope: authentication, Firestore security rules (`firestore.rules`), the AI generation route (`app/api/generate-quiz`), and anything that exposes user data.
++
++## Known limitations (by design)
++
++These are documented trade-offs, not hidden bugs:
++
++- **Live games do not require an account.** Within a game code, player scores are validated by Firestore rules (range and shape), but not tied to a verified identity. Fine for casual and classroom use. Tamper-proof scoring would need server-side validation (for example Cloud Functions).
++- **Anti-cheat is best-effort.** Copy blocking and tab-switch detection discourage cheating but cannot prevent it.
++- **The AI route's rate limit is in-memory**, so it is per server instance on serverless hosting.
++
++## Running your own copy
++
++If you fork and deploy this project:
++
++1. Use your own Firebase project and your own API keys.
++2. Change the owner/admin emails in **both** `lib/users.ts` (`OWNER_EMAILS`) and `firestore.rules` (`isVerifiedOwner`). Whoever signs up with a listed, verified email becomes an admin.
++3. Deploy the rules: `npx firebase-tools deploy --only firestore:rules`.
+diff --git a/docs/screenshots/.gitkeep b/docs/screenshots/.gitkeep
+new file mode 100644
+index 0000000..e69de29
+diff --git a/lib/firebase.ts b/lib/firebase.ts
+index 0c160bc..789932d 100644
+--- a/lib/firebase.ts
++++ b/lib/firebase.ts
+@@ -1,7 +1,6 @@
+-// Firebase client initialization — this project uses the SAME Firebase
+-// project as the main portfolio (coderafroj.me). Use the identical
+-// NEXT_PUBLIC_FIREBASE_* values from that project's .env when deploying
+-// this site. Fails soft if env vars aren't set yet, so the marketing pages
++// Firebase client initialization. Configure it with your own Firebase
++// project via the NEXT_PUBLIC_FIREBASE_* values in .env.local (see
++// .env.example). Fails soft if env vars aren't set, so the marketing pages
+ // still render.
+ 
+ import { initializeApp, getApps, getApp, type FirebaseOptions } from "firebase/app";
+diff --git a/package.json b/package.json
+index 6cc53bd..09ec074 100644
+--- a/package.json
++++ b/package.json
+@@ -1,6 +1,16 @@
+ {
+   "name": "quizplay",
+   "version": "0.1.0",
++  "description": "Free NIELIT O Level practice and live quiz platform built with Next.js and Firebase",
++  "license": "MIT",
++  "repository": {
++    "type": "git",
++    "url": "git+https://github.com/coderafroj/quiz.git"
++  },
++  "homepage": "https://play.coderafroj.me",
++  "bugs": {
++    "url": "https://github.com/coderafroj/quiz/issues"
++  },
+   "private": true,
+   "scripts": {
+     "dev": "next dev",
+diff --git a/public/file.svg b/public/file.svg
+deleted file mode 100644
+index 004145c..0000000
+--- a/public/file.svg
++++ /dev/null
+@@ -1 +0,0 @@
+-<svg fill="none" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M14.5 13.5V5.41a1 1 0 0 0-.3-.7L9.8.29A1 1 0 0 0 9.08 0H1.5v13.5A2.5 2.5 0 0 0 4 16h8a2.5 2.5 0 0 0 2.5-2.5m-1.5 0v-7H8v-5H3v12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1M9.5 5V2.12L12.38 5zM5.13 5h-.62v1.25h2.12V5zm-.62 3h7.12v1.25H4.5zm.62 3h-.62v1.25h7.12V11z" clip-rule="evenodd" fill="#666" fill-rule="evenodd"/></svg>
+\ No newline at end of file
+diff --git a/public/globe.svg b/public/globe.svg
+deleted file mode 100644
+index 567f17b..0000000
+--- a/public/globe.svg
++++ /dev/null
+@@ -1 +0,0 @@
+-<svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><g clip-path="url(#a)"><path fill-rule="evenodd" clip-rule="evenodd" d="M10.27 14.1a6.5 6.5 0 0 0 3.67-3.45q-1.24.21-2.7.34-.31 1.83-.97 3.1M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16m.48-1.52a7 7 0 0 1-.96 0H7.5a4 4 0 0 1-.84-1.32q-.38-.89-.63-2.08a40 40 0 0 0 3.92 0q-.25 1.2-.63 2.08a4 4 0 0 1-.84 1.31zm2.94-4.76q1.66-.15 2.95-.43a7 7 0 0 0 0-2.58q-1.3-.27-2.95-.43a18 18 0 0 1 0 3.44m-1.27-3.54a17 17 0 0 1 0 3.64 39 39 0 0 1-4.3 0 17 17 0 0 1 0-3.64 39 39 0 0 1 4.3 0m1.1-1.17q1.45.13 2.69.34a6.5 6.5 0 0 0-3.67-3.44q.65 1.26.98 3.1M8.48 1.5l.01.02q.41.37.84 1.31.38.89.63 2.08a40 40 0 0 0-3.92 0q.25-1.2.63-2.08a4 4 0 0 1 .85-1.32 7 7 0 0 1 .96 0m-2.75.4a6.5 6.5 0 0 0-3.67 3.44 29 29 0 0 1 2.7-.34q.31-1.83.97-3.1M4.58 6.28q-1.66.16-2.95.43a7 7 0 0 0 0 2.58q1.3.27 2.95.43a18 18 0 0 1 0-3.44m.17 4.71q-1.45-.12-2.69-.34a6.5 6.5 0 0 0 3.67 3.44q-.65-1.27-.98-3.1" fill="#666"/></g><defs><clipPath id="a"><path fill="#fff" d="M0 0h16v16H0z"/></clipPath></defs></svg>
+\ No newline at end of file
+diff --git a/public/next.svg b/public/next.svg
+deleted file mode 100644
+index 5174b28..0000000
+--- a/public/next.svg
++++ /dev/null
+@@ -1 +0,0 @@
+-<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 394 80"><path fill="#000" d="M262 0h68.5v12.7h-27.2v66.6h-13.6V12.7H262V0ZM149 0v12.7H94v20.4h44.3v12.6H94v21h55v12.6H80.5V0h68.7zm34.3 0h-17.8l63.8 79.4h17.9l-32-39.7 32-39.6h-17.9l-23 28.6-23-28.6zm18.3 56.7-9-11-27.1 33.7h17.8l18.3-22.7z"/><path fill="#000" d="M81 79.3 17 0H0v79.3h13.6V17l50.2 62.3H81Zm252.6-.4c-1 0-1.8-.4-2.5-1s-1.1-1.6-1.1-2.6.3-1.8 1-2.5 1.6-1 2.6-1 1.8.3 2.5 1a3.4 3.4 0 0 1 .6 4.3 3.7 3.7 0 0 1-3 1.8zm23.2-33.5h6v23.3c0 2.1-.4 4-1.3 5.5a9.1 9.1 0 0 1-3.8 3.5c-1.6.8-3.5 1.3-5.7 1.3-2 0-3.7-.4-5.3-1s-2.8-1.8-3.7-3.2c-.9-1.3-1.4-3-1.4-5h6c.1.8.3 1.6.7 2.2s1 1.2 1.6 1.5c.7.4 1.5.5 2.4.5 1 0 1.8-.2 2.4-.6a4 4 0 0 0 1.6-1.8c.3-.8.5-1.8.5-3V45.5zm30.9 9.1a4.4 4.4 0 0 0-2-3.3 7.5 7.5 0 0 0-4.3-1.1c-1.3 0-2.4.2-3.3.5-.9.4-1.6 1-2 1.6a3.5 3.5 0 0 0-.3 4c.3.5.7.9 1.3 1.2l1.8 1 2 .5 3.2.8c1.3.3 2.5.7 3.7 1.2a13 13 0 0 1 3.2 1.8 8.1 8.1 0 0 1 3 6.5c0 2-.5 3.7-1.5 5.1a10 10 0 0 1-4.4 3.5c-1.8.8-4.1 1.2-6.8 1.2-2.6 0-4.9-.4-6.8-1.2-2-.8-3.4-2-4.5-3.5a10 10 0 0 1-1.7-5.6h6a5 5 0 0 0 3.5 4.6c1 .4 2.2.6 3.4.6 1.3 0 2.5-.2 3.5-.6 1-.4 1.8-1 2.4-1.7a4 4 0 0 0 .8-2.4c0-.9-.2-1.6-.7-2.2a11 11 0 0 0-2.1-1.4l-3.2-1-3.8-1c-2.8-.7-5-1.7-6.6-3.2a7.2 7.2 0 0 1-2.4-5.7 8 8 0 0 1 1.7-5 10 10 0 0 1 4.3-3.5c2-.8 4-1.2 6.4-1.2 2.3 0 4.4.4 6.2 1.2 1.8.8 3.2 2 4.3 3.4 1 1.4 1.5 3 1.5 5h-5.8z"/></svg>
+\ No newline at end of file
+diff --git a/public/vercel.svg b/public/vercel.svg
+deleted file mode 100644
+index 7705396..0000000
+--- a/public/vercel.svg
++++ /dev/null
+@@ -1 +0,0 @@
+-<svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1155 1000"><path d="m577.3 0 577.4 1000H0z" fill="#fff"/></svg>
+\ No newline at end of file
+diff --git a/public/window.svg b/public/window.svg
+deleted file mode 100644
+index b2b2a44..0000000
+--- a/public/window.svg
++++ /dev/null
+@@ -1 +0,0 @@
+-<svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><path fill-rule="evenodd" clip-rule="evenodd" d="M1.5 2.5h13v10a1 1 0 0 1-1 1h-11a1 1 0 0 1-1-1zM0 1h16v11.5a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 0 12.5zm3.75 4.5a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5M7 4.75a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0m1.75.75a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5" fill="#666"/></svg>
+\ No newline at end of file
+-- 
+2.43.0
+

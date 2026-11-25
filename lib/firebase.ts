@@ -1,7 +1,6 @@
-// Firebase client initialization — this project uses the SAME Firebase
-// project as the main portfolio (coderafroj.me). Use the identical
-// NEXT_PUBLIC_FIREBASE_* values from that project's .env when deploying
-// this site. Fails soft if env vars aren't set yet, so the marketing pages
+// Firebase client initialization. Configure it with your own Firebase
+// project via the NEXT_PUBLIC_FIREBASE_* values in .env.local (see
+// .env.example). Fails soft if env vars aren't set, so the marketing pages
 // still render.
 
 import { initializeApp, getApps, getApp, type FirebaseOptions } from "firebase/app";
