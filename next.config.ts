@@ -18,6 +18,7 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false, // don't advertise the framework
   compress: true,
+  devIndicators: false,
   experimental: {
     // Smaller client bundles: only import the icons / motion helpers actually used.
     optimizePackageImports: ["lucide-react", "framer-motion"],
